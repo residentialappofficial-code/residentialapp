@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS warga (
     nama TEXT NOT NULL,
     blok TEXT NOT NULL,
     no_hp TEXT,
+    email TEXT UNIQUE,
+    user_id UUID UNIQUE, -- REFERENCES auth.users(id)
+    role TEXT CHECK (role IN ('super_admin', 'admin', 'resident')) DEFAULT 'resident',
     status_hunian TEXT CHECK (status_hunian IN ('Pemilik', 'Kontrak', 'Kos')) DEFAULT 'Pemilik',
     status_iuran TEXT CHECK (status_iuran IN ('Lunas', 'Belum Bayar', 'Sebagian')) DEFAULT 'Belum Bayar',
     created_at TIMESTAMPTZ DEFAULT now()
@@ -75,10 +78,55 @@ ALTER TABLE iuran ENABLE ROW LEVEL SECURITY;
 ALTER TABLE penggajian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE forum_posts ENABLE ROW LEVEL SECURITY;
 
--- Create basic policies (Allow all for now for public development, restrict later)
-CREATE POLICY "Public full access" ON warga FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access" ON pengurus FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access" ON arus_kas FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access" ON iuran FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access" ON penggajian FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Public full access" ON forum_posts FOR ALL USING (true) WITH CHECK (true);
+-- Create Granular Policies
+
+-- 1. Super Admin Policies: Full access to everything
+CREATE POLICY "Super Admins have full access" ON warga FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
+
+CREATE POLICY "Super Admins have full access" ON pengurus FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
+
+CREATE POLICY "Super Admins have full access" ON arus_kas FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
+
+CREATE POLICY "Super Admins have full access" ON iuran FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
+
+CREATE POLICY "Super Admins have full access" ON penggajian FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
+
+CREATE POLICY "Super Admins have full access" ON forum_posts FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
+
+-- 2. Admin Policies: Full access to everything if role = 'admin'
+CREATE POLICY "Admins have full access" ON warga FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Admins have full access" ON pengurus FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Admins have full access" ON arus_kas FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Admins have full access" ON iuran FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Admins have full access" ON penggajian FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Admins have full access" ON forum_posts FOR ALL 
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+
+-- 2. Resident Policies: Limited access
+CREATE POLICY "Residents can view own data" ON warga FOR SELECT
+USING (user_id = auth.uid());
+
+CREATE POLICY "Residents can view own iuran" ON iuran FOR SELECT
+USING (warga_id IN (SELECT id FROM warga WHERE user_id = auth.uid()));
+
+CREATE POLICY "Residents can view forum posts" ON forum_posts FOR SELECT
+USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "Residents can view public pengurus" ON pengurus FOR SELECT
+USING (auth.uid() IS NOT NULL);
