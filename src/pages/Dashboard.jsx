@@ -23,9 +23,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
+  const { user, profile } = useAuth();
   const [stats, setStats] = useState({
     totalWarga: 0,
     iuranBulanIni: 0,
@@ -36,14 +37,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, profile]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      const isResident = profile?.role === 'resident';
       
-      // 1. Total Warga
+      // 1. Total Warga (Public-ish for transparency)
       const { count: wargaCount } = await supabase
         .from('warga')
         .select('*', { count: 'exact', head: true });
@@ -53,25 +57,26 @@ export default function Dashboard() {
         .from('pengurus')
         .select('*', { count: 'exact', head: true });
 
-      // 3. Saldo Terakhir dari Arus Kas
+      // 3. Saldo Terakhir dari Arus Kas (Transparent)
       const { data: lastKas } = await supabase
         .from('arus_kas')
         .select('saldo_after')
         .order('created_at', { ascending: false })
         .limit(1);
 
-      // 4. Iuran Bulan Ini (Sum)
+      // 4. Iuran (Context sensitive)
       const currentMonth = new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' });
-      const { data: iuranData } = await supabase
-        .from('iuran')
-        .select('jumlah')
-        .eq('bulan', currentMonth)
-        .eq('status', 'Lunas');
+      let iuranQuery = supabase.from('iuran').select('jumlah').eq('bulan', currentMonth).eq('status', 'Lunas');
       
+      if (isResident) {
+        iuranQuery = iuranQuery.eq('warga_id', profile.id);
+      }
+      
+      const { data: iuranData } = await iuranQuery;
       const totalIuran = iuranData?.reduce((acc, curr) => acc + Number(curr.jumlah), 0) || 0;
 
-      // 5. Recent Payments with join to warga
-      const { data: payments } = await supabase
+      // 5. Recent Payments (Context sensitive)
+      let paymentsQuery = supabase
         .from('iuran')
         .select(`
           id,
@@ -82,6 +87,12 @@ export default function Dashboard() {
         `)
         .order('created_at', { ascending: false })
         .limit(5);
+
+      if (isResident) {
+        paymentsQuery = paymentsQuery.eq('warga_id', profile.id);
+      }
+
+      const { data: payments } = await paymentsQuery;
 
       setStats({
         totalWarga: wargaCount || 0,
@@ -241,18 +252,37 @@ export default function Dashboard() {
               <CardTitle>Tindakan Cepat</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="secondary" className="w-full justify-start gap-2" asChild>
-                <Link to="/forum">
-                  <MessageSquarePlus className="h-4 w-4" />
-                  Buat Pengumuman Forum
-                </Link>
-              </Button>
-              <Button variant="secondary" className="w-full justify-start gap-2" asChild>
-                <Link to="/kas">
-                  <WalletCards className="h-4 w-4" />
-                  Tambah Catatan Kas
-                </Link>
-              </Button>
+              {profile?.role === 'resident' ? (
+                <>
+                  <Button className="w-full justify-start gap-2" asChild>
+                    <Link to="/forum">
+                      <MessageSquarePlus className="h-4 w-4" />
+                      Posting ke Forum
+                    </Link>
+                  </Button>
+                  <Button variant="secondary" className="w-full justify-start gap-2" asChild>
+                    <Link to="/iuran">
+                      <ReceiptText className="h-4 w-4" />
+                      Lihat Riwayat Iuran
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="secondary" className="w-full justify-start gap-2" asChild>
+                    <Link to="/forum">
+                      <MessageSquarePlus className="h-4 w-4" />
+                      Buat Pengumuman Forum
+                    </Link>
+                  </Button>
+                  <Button variant="secondary" className="w-full justify-start gap-2" asChild>
+                    <Link to="/kas">
+                      <WalletCards className="h-4 w-4" />
+                      Tambah Catatan Kas
+                    </Link>
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -14,11 +14,18 @@ import ArusKas from '@/pages/ArusKas';
 import Penggajian from '@/pages/Penggajian';
 import ForumWarga from '@/pages/ForumWarga';
 
+import { useAuth } from '@/contexts/AuthContext';
+import Login from '@/pages/Login';
+
 function AppLayout({ children }) {
+  const { user, profile } = useAuth();
+  
+  if (!user) return <Login />;
+
   return (
     <SidebarProvider>
       <div className="flex bg-neutral-50 h-screen w-full overflow-hidden text-neutral-900 font-sans">
-        <AppSidebar />
+        <AppSidebar role={profile?.role} />
         <div className="flex flex-col flex-1 min-w-0 h-screen overflow-hidden">
           <Header />
           <main className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -33,20 +40,38 @@ function AppLayout({ children }) {
 }
 
 function App() {
+  const { loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-neutral-50">
+        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
-      <AppLayout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/warga" element={<DataWarga />} />
-          <Route path="/pengurus" element={<DataPengurus />} />
-          <Route path="/iuran" element={<PembayaranIuran />} />
-          <Route path="/kas" element={<ArusKas />} />
-          <Route path="/penggajian" element={<Penggajian />} />
-          <Route path="/forum" element={<ForumWarga />} />
-        </Routes>
-      </AppLayout>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/*" 
+          element={
+            <AppLayout>
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/warga" element={<DataWarga />} />
+                <Route path="/pengurus" element={<DataPengurus />} />
+                <Route path="/iuran" element={<PembayaranIuran />} />
+                <Route path="/kas" element={<ArusKas />} />
+                <Route path="/penggajian" element={<Penggajian />} />
+                <Route path="/forum" element={<ForumWarga />} />
+              </Routes>
+            </AppLayout>
+          } 
+        />
+      </Routes>
       <Toaster position="top-right" richColors />
     </BrowserRouter>
   );

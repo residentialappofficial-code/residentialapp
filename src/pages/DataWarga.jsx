@@ -37,6 +37,8 @@ export default function DataWarga() {
     nama: "",
     blok: "",
     no_hp: "",
+    email: "",
+    role: "resident",
     status_hunian: "Pemilik",
     status_iuran: "Belum Bayar"
   });
@@ -75,6 +77,8 @@ export default function DataWarga() {
         nama: item.nama,
         blok: item.blok,
         no_hp: item.no_hp || "",
+        email: item.email || "",
+        role: item.role || "resident",
         status_hunian: item.status_hunian,
         status_iuran: item.status_iuran
       });
@@ -84,6 +88,8 @@ export default function DataWarga() {
         nama: "",
         blok: "",
         no_hp: "",
+        email: "",
+        role: "resident",
         status_hunian: "Pemilik",
         status_iuran: "Belum Bayar"
       });
@@ -189,6 +195,32 @@ export default function DataWarga() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="email" className="text-right">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    placeholder="email@perumahan.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="role" className="text-right">Role</Label>
+                  <div className="col-span-3">
+                    <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="resident">Warga / Resident</SelectItem>
+                        <SelectItem value="admin">Admin Perumahan</SelectItem>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="status_hunian" className="text-right">Status</Label>
                   <div className="col-span-3">
                     <Select value={formData.status_hunian} onValueChange={(val) => setFormData({...formData, status_hunian: val})}>
@@ -229,6 +261,7 @@ export default function DataWarga() {
             <TableRow className="bg-neutral-50/50">
               <TableHead className="w-[50px]">No</TableHead>
               <TableHead>Nama Warga</TableHead>
+              <TableHead>Email / Akun</TableHead>
               <TableHead>Blok/No</TableHead>
               <TableHead>No. HP</TableHead>
               <TableHead>Status Hunian</TableHead>
@@ -257,6 +290,16 @@ export default function DataWarga() {
                 <TableRow key={warga.id}>
                   <TableCell className="font-medium text-neutral-500">{index + 1}</TableCell>
                   <TableCell className="font-medium text-neutral-900">{warga.nama}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-sm">{warga.email || "-"}</span>
+                      {warga.role && (
+                        <span className="text-[10px] uppercase font-bold text-blue-600">
+                          {warga.role}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{warga.blok}</TableCell>
                   <TableCell>{warga.no_hp || "-"}</TableCell>
                   <TableCell>
