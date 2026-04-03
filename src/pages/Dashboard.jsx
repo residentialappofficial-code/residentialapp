@@ -37,12 +37,6 @@ export default function Dashboard() {
   const [recentPayments, setRecentPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData();
-    }
-  }, [user, profile, fetchDashboardData]);
-
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -109,6 +103,12 @@ export default function Dashboard() {
       setLoading(false);
     }
   }, [user, profile]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, profile, fetchDashboardData]);
   return (
     <div className="space-y-8">
       <div>
