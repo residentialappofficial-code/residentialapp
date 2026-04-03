@@ -60,7 +60,9 @@ export default function Login() {
   };
 
   const isRegMode = mode === "register" || mode === "setup";
-  const themeColor = mode === "setup" ? "green" : mode === "register" ? "indigo" : "blue";
+  const cardBorderClass = mode === "setup" ? "border-t-green-600" : mode === "register" ? "border-t-indigo-600" : "border-t-blue-600";
+  const iconBgClass = mode === "setup" ? "bg-green-600" : mode === "register" ? "bg-indigo-600" : "bg-blue-600";
+  const btnClass = mode === "setup" ? "bg-green-600 hover:bg-green-700" : mode === "register" ? "bg-indigo-600 hover:bg-indigo-700" : "bg-blue-600 hover:bg-blue-700";
 
   const titles = {
     login: "SimPerumahan",
@@ -76,10 +78,10 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-neutral-50 p-4">
-      <Card className={`w-full max-w-md shadow-xl border-t-4 border-t-${themeColor}-600`}>
+      <Card className={`w-full max-w-md shadow-xl border-t-4 ${cardBorderClass}`}>
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className={`bg-${themeColor}-600 p-3 rounded-2xl shadow-lg`}>
+            <div className={`${iconBgClass} p-3 rounded-2xl shadow-lg`}>
               <ShieldCheck className="h-8 w-8 text-white" />
             </div>
           </div>
@@ -127,7 +129,7 @@ export default function Login() {
           <CardFooter className="flex flex-col space-y-3 pt-2">
             <Button
               type="submit"
-              className={`w-full h-11 text-white font-semibold rounded-lg bg-${themeColor}-600 hover:bg-${themeColor}-700 transition-all`}
+              className={`w-full h-11 text-white font-semibold rounded-lg transition-all ${btnClass}`}
               disabled={loading}
             >
               {loading ? (
