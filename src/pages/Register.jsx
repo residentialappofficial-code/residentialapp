@@ -6,24 +6,36 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 
-export default function Login() {
+export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [nama, setNama] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      toast.success("Login berhasil!");
-      navigate("/dashboard");
+      const { data, error: authError } = await supabase.auth.signUp({ email, password });
+      if (authError) throw authError;
+
+      const { error: dbError } = await supabase.from('warga').insert([{
+        nama,
+        email,
+        user_id: data.session?.user?.id || data.user?.id,
+        role: 'admin',
+        blok: 'OWNER-00',
+        status_hunian: 'Pemilik',
+      }]);
+      if (dbError) throw dbError;
+
+      toast.success("Akun berhasil dibuat! Silakan cek email konfirmasi lalu login.");
+      navigate("/login");
     } catch (error) {
-      toast.error("Gagal Login: " + error.message);
+      toast.error("Gagal: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -31,21 +43,31 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-neutral-50 p-4">
-      <Card className="w-full max-w-md shadow-xl border-t-4 border-t-blue-600">
+      <Card className="w-full max-w-md shadow-xl border-t-4 border-t-indigo-600">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="bg-blue-600 p-3 rounded-2xl shadow-lg">
-              <ShieldCheck className="h-8 w-8 text-white" />
+            <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg">
+              <UserPlus className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">SimPerumahan</CardTitle>
+          <CardTitle className="text-3xl font-bold tracking-tight">Daftar Pengelola</CardTitle>
           <CardDescription className="text-neutral-500">
-            Sistem Informasi Manajemen Perumahan & Paguyuban
+            Daftarkan diri Anda sebagai Pengelola/Admin Perumahan.
           </CardDescription>
         </CardHeader>
 
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleRegister}>
           <CardContent className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="nama">Nama Lengkap</Label>
+              <Input
+                id="nama"
+                placeholder="Contoh: Budi Santoso"
+                required
+                value={nama}
+                onChange={(e) => setNama(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Alamat Email</Label>
               <Input
@@ -62,6 +84,7 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
+                placeholder="Minimal 6 karakter"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -72,21 +95,19 @@ export default function Login() {
           <CardFooter className="flex flex-col space-y-3 pt-2">
             <Button
               type="submit"
-              className="w-full h-11 text-white font-semibold rounded-lg bg-blue-600 hover:bg-blue-700 transition-all"
+              className="w-full h-11 text-white font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-all"
               disabled={loading}
             >
               {loading ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
               ) : (
-                "Masuk ke Dashboard"
+                "Daftar Akun Admin"
               )}
             </Button>
 
-            <div className="flex flex-col items-center w-full pt-1">
-              <Button variant="link" type="button" className="text-indigo-600 font-semibold h-auto py-0" asChild>
-                <Link to="/register">Daftar sebagai Pengelola Perumahan</Link>
-              </Button>
-            </div>
+            <Button variant="ghost" type="button" className="w-full text-neutral-500" asChild>
+              <Link to="/login">Kembali ke Login</Link>
+            </Button>
           </CardFooter>
         </form>
       </Card>

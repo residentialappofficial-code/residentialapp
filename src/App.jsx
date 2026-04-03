@@ -14,15 +14,29 @@ import PembayaranIuran from '@/pages/PembayaranIuran';
 import ArusKas from '@/pages/ArusKas';
 import Penggajian from '@/pages/Penggajian';
 import ForumWarga from '@/pages/ForumWarga';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
 
 import { useAuth } from '@/contexts/AuthContext';
-import Login from '@/pages/Login';
+
+// Guard: redirect ke /login kalau belum login
+function PrivateRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+// Guard: redirect ke /dashboard kalau sudah login
+function PublicRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (user) return <Navigate to="/dashboard" replace />;
+  return children;
+}
 
 function AppLayout({ children }) {
-  const { user, profile } = useAuth();
-  
-  if (!user) return <Login />;
-
+  const { profile } = useAuth();
   return (
     <SidebarProvider>
       <div className="flex bg-neutral-50 h-screen w-full overflow-hidden text-neutral-900 font-sans">
@@ -54,24 +68,24 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route 
-          path="/*" 
-          element={
-            <AppLayout>
-              <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/warga" element={<DataWarga />} />
-                <Route path="/pengurus" element={<DataPengurus />} />
-                <Route path="/iuran" element={<PembayaranIuran />} />
-                <Route path="/kas" element={<ArusKas />} />
-                <Route path="/penggajian" element={<Penggajian />} />
-                <Route path="/forum" element={<ForumWarga />} />
-              </Routes>
-            </AppLayout>
-          } 
-        />
+        {/* Public routes */}
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+
+        {/* Redirect root ke dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* Protected routes */}
+        <Route path="/dashboard" element={<PrivateRoute><AppLayout><Dashboard /></AppLayout></PrivateRoute>} />
+        <Route path="/warga" element={<PrivateRoute><AppLayout><DataWarga /></AppLayout></PrivateRoute>} />
+        <Route path="/pengurus" element={<PrivateRoute><AppLayout><DataPengurus /></AppLayout></PrivateRoute>} />
+        <Route path="/iuran" element={<PrivateRoute><AppLayout><PembayaranIuran /></AppLayout></PrivateRoute>} />
+        <Route path="/kas" element={<PrivateRoute><AppLayout><ArusKas /></AppLayout></PrivateRoute>} />
+        <Route path="/penggajian" element={<PrivateRoute><AppLayout><Penggajian /></AppLayout></PrivateRoute>} />
+        <Route path="/forum" element={<PrivateRoute><AppLayout><ForumWarga /></AppLayout></PrivateRoute>} />
+
+        {/* 404 fallback */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
       <Toaster position="top-right" richColors />
     </BrowserRouter>
