@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sidebar";
 import { LogOut, LayoutDashboard, Users, UserCog, Receipt, WalletCards, Banknote, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 // Menu items with role requirements
 const allItems = [
@@ -76,7 +77,7 @@ export function AppSidebar({ role = "resident" }) {
           <div className="flex flex-col">
             <span className="font-semibold leading-none text-neutral-900">PerumahanKu</span>
             <span className="text-xs text-neutral-500 mt-1 uppercase tracking-wider font-bold">
-              {role === 'super_admin' ? 'Super Admin' : role === 'admin' ? 'Admin Perumahan' : 'Warga'}
+              {role === 'resident' ? 'Warga' : 'Administrator'}
             </span>
           </div>
         </div>

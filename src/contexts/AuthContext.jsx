@@ -31,7 +31,10 @@ export const AuthProvider = ({ children }) => {
         .single();
       
       if (!error && data) {
+        console.log("Profile loaded:", data.role);
         setProfile(data);
+      } else if (error) {
+        console.error("Profile fetch error:", error.message);
       }
     };
 
@@ -61,7 +64,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

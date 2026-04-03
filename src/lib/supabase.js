@@ -7,4 +7,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn("Supabase credentials not found in environment variables. Application will use mock data or fail.")
 }
 
-export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder')
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'sb-vhrkqekmzujnecraviwd-auth-token',
+      lock: null,
+    }
+  }
+)

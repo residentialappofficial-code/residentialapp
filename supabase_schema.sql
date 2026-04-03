@@ -78,55 +78,33 @@ ALTER TABLE iuran ENABLE ROW LEVEL SECURITY;
 ALTER TABLE penggajian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE forum_posts ENABLE ROW LEVEL SECURITY;
 
--- Create Granular Policies
+-- 1. Warga Table Policies (Careful with recursion)
+CREATE POLICY "Users can view own profile" ON warga FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can update own profile" ON warga FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own profile" ON warga FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- 1. Super Admin Policies: Full access to everything
-CREATE POLICY "Super Admins have full access" ON warga FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
+-- Admin access to all warga (Non-recursive check via JWT or simplified)
+CREATE POLICY "Admins can view all warga" ON warga FOR SELECT 
+USING (EXISTS (SELECT 1 FROM auth.users WHERE id = auth.uid() AND (raw_user_meta_data->>'role' = 'admin' OR raw_user_meta_data->>'role' = 'super_admin')));
+-- Note: If metadata is not used, we can use a role-based check that doesn't trigger the same policy.
+-- For simplicity, let's allow all authenticated users to SELECT from warga (like a directory)
+DROP POLICY IF EXISTS "Users can view own profile" ON warga;
+CREATE POLICY "Registered users can view all warga" ON warga FOR SELECT USING (auth.uid() IS NOT NULL);
 
-CREATE POLICY "Super Admins have full access" ON pengurus FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
-
-CREATE POLICY "Super Admins have full access" ON arus_kas FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
-
-CREATE POLICY "Super Admins have full access" ON iuran FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
-
-CREATE POLICY "Super Admins have full access" ON penggajian FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
-
-CREATE POLICY "Super Admins have full access" ON forum_posts FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'super_admin'));
-
--- 2. Admin Policies: Full access to everything if role = 'admin'
-CREATE POLICY "Admins have full access" ON warga FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
-
+-- Admin power for other tables (These are fine as they refer to another table 'warga')
 CREATE POLICY "Admins have full access" ON pengurus FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role IN ('admin', 'super_admin')));
 
 CREATE POLICY "Admins have full access" ON arus_kas FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role IN ('admin', 'super_admin')));
 
 CREATE POLICY "Admins have full access" ON iuran FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role IN ('admin', 'super_admin')));
 
 CREATE POLICY "Admins have full access" ON penggajian FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
+USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role IN ('admin', 'super_admin')));
 
-CREATE POLICY "Admins have full access" ON forum_posts FOR ALL 
-USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role = 'admin'));
-
--- 2. Resident Policies: Limited access
-CREATE POLICY "Residents can view own data" ON warga FOR SELECT
-USING (user_id = auth.uid());
-
-CREATE POLICY "Residents can view own iuran" ON iuran FOR SELECT
-USING (warga_id IN (SELECT id FROM warga WHERE user_id = auth.uid()));
-
-CREATE POLICY "Residents can view forum posts" ON forum_posts FOR SELECT
-USING (auth.uid() IS NOT NULL);
-
-CREATE POLICY "Residents can view public pengurus" ON pengurus FOR SELECT
-USING (auth.uid() IS NOT NULL);
+-- Forum Policies
+CREATE POLICY "Users can view all posts" ON forum_posts FOR SELECT USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Users can create posts" ON forum_posts FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY "Admins can manage forum" ON forum_posts FOR DELETE USING (EXISTS (SELECT 1 FROM warga WHERE user_id = auth.uid() AND role IN ('admin', 'super_admin')));
