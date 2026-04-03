@@ -52,7 +52,7 @@ export default function Penggajian() {
       
       if (error) throw error;
       setData(payroll || []);
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengambil data gaji");
     } finally {
       setLoading(false);
@@ -119,7 +119,7 @@ export default function Penggajian() {
       if (error) throw error;
       toast.success("Data dihapus");
       fetchData();
-    } catch (error) {
+    } catch {
       toast.error("Gagal menghapus");
     }
   };

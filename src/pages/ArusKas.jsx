@@ -52,7 +52,7 @@ export default function ArusKas() {
       
       if (error) throw error;
       setData(transactions || []);
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengambil data arus kas");
     } finally {
       setLoading(false);

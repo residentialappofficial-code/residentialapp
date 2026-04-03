@@ -52,7 +52,7 @@ export default function DataPengurus() {
       
       if (error) throw error;
       setData(staff || []);
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengambil data pengurus");
     } finally {
       setLoading(false);

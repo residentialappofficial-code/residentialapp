@@ -31,7 +31,7 @@ export default function ForumWarga() {
       
       if (error) throw error;
       setPosts(data || []);
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengambil postingan forum");
     } finally {
       setLoading(false);
@@ -60,7 +60,7 @@ export default function ForumWarga() {
       setNewPostContent("");
       toast.success("Postingan berhasil diterbitkan");
       fetchPosts();
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengirim postingan");
     }
   };

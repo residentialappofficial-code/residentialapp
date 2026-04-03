@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 "use client";
 import * as React from "react"
 import { cva } from "class-variance-authority";
@@ -571,9 +572,9 @@ function SidebarMenuSkeleton({
   showIcon = false,
   ...props
 }) {
-  // Random width between 50 to 90%.
+  // Stable width for skeleton loading.
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
+    return "75%";
   }, [])
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { 
   Users, 
@@ -41,9 +41,9 @@ export default function Dashboard() {
     if (user) {
       fetchDashboardData();
     }
-  }, [user, profile]);
+  }, [user, profile, fetchDashboardData]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       const isResident = profile?.role === 'resident';
@@ -103,12 +103,12 @@ export default function Dashboard() {
       });
       setRecentPayments(payments || []);
 
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, profile]);
   return (
     <div className="space-y-8">
       <div>

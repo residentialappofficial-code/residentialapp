@@ -59,7 +59,7 @@ export default function PembayaranIuran() {
       
       if (error) throw error;
       setData(payments || []);
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengambil data iuran");
     } finally {
       setLoading(false);
@@ -71,7 +71,7 @@ export default function PembayaranIuran() {
       const { data: residents, error } = await supabase.from('warga').select('id, nama, blok');
       if (error) throw error;
       setWargaList(residents || []);
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengambil data warga");
     }
   };
@@ -128,7 +128,7 @@ export default function PembayaranIuran() {
       if (error) throw error;
       toast.success("Status diperbarui menjadi Lunas");
       fetchData();
-    } catch (error) {
+    } catch {
       toast.error("Gagal memperbarui status");
     }
   };
