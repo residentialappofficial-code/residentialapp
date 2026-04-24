@@ -1,66 +1,94 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Plus, Search, Filter, CheckCircle2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Search, CheckCircle2 } from "lucide-react";
 import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Input,
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Badge,
+  Icon,
+  Center,
+  Stack,
+  SimpleGrid,
+  Spinner,
+} from "@chakra-ui/react";
+import { InputGroup } from "@/components/ui/chakra/input-group";
 import {
-  Dialog,
+  DialogRoot,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+  DialogBody,
+  DialogFooter,
+  DialogActionTrigger,
+} from "@/components/ui/chakra/dialog";
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/chakra/select";
+import { Field } from "@/components/ui/chakra/field";
+import { toaster } from "@/components/ui/chakra/toaster";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PembayaranIuran() {
+  const { profile } = useAuth();
   const [data, setData] = useState([]);
   const [wargaList, setWargaList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterMonth, setFilterMonth] = useState("Semua");
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState({
     warga_id: "",
-    bulan: new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' }),
+    bulan: new Date().getMonth() + 1,
+    tahun: new Date().getFullYear(),
     jumlah: 150000,
     tanggal_bayar: new Date().toISOString().split('T')[0],
     status: "Lunas"
   });
 
+  const months = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+
   useEffect(() => {
     fetchData();
     fetchWarga();
-  }, []);
+  }, [filterMonth, filterYear]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const { data: payments, error } = await supabase
-        .from('iuran')
+        .from('pembayaran_iuran')
         .select(`
           *,
-          warga (id, nama, blok)
+          warga:warga_id(nama, blok)
         `)
+        .eq('bulan', filterMonth)
+        .eq('tahun', filterYear)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       setData(payments || []);
-    } catch {
-      toast.error("Gagal mengambil data iuran");
+    } catch (error) {
+      toaster.create({
+        title: "Gagal mengambil data iuran",
+        description: error.message,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -68,25 +96,31 @@ export default function PembayaranIuran() {
 
   const fetchWarga = async () => {
     try {
-      const { data: residents, error } = await supabase.from('warga').select('id, nama, blok');
+      let query = supabase.from('warga').select('id, nama, blok');
+      if (profile?.role !== 'super_admin') {
+        query = query.eq('perumahan_id', profile?.perumahan_id);
+      }
+      const { data: residents, error } = await query;
       if (error) throw error;
       setWargaList(residents || []);
     } catch {
-      toast.error("Gagal mengambil data warga");
+      toaster.create({
+        title: "Gagal mengambil data warga",
+        type: "error",
+      });
     }
   };
 
-  const filteredData = data.filter(item => {
-    const matchesSearch = item.warga?.nama?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         item.warga?.blok?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMonth = filterMonth === "Semua" || item.bulan === filterMonth;
-    return matchesSearch && matchesMonth;
-  });
+  const filteredData = data.filter(item => 
+    item.warga?.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.warga?.blok?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleOpenDialog = () => {
     setFormData({
       warga_id: "",
-      bulan: new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' }),
+      bulan: new Date().getMonth() + 1,
+      tahun: new Date().getFullYear(),
       jumlah: 150000,
       tanggal_bayar: new Date().toISOString().split('T')[0],
       status: "Lunas"
@@ -97,220 +131,146 @@ export default function PembayaranIuran() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.warga_id) {
-      toast.error("Silakan pilih warga");
+      toaster.create({ title: "Peringatan", description: "Pilih warga", type: "warning" });
       return;
     }
     try {
-      const { error } = await supabase
-        .from('iuran')
-        .insert([formData]);
-      
+      const { error } = await supabase.from('pembayaran_iuran').insert([formData]);
       if (error) throw error;
-      
-      toast.success("Pembayaran iuran berhasil dicatat");
+      toaster.create({ title: "Berhasil", description: "Pembayaran iuran dicatat", type: "success" });
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error("Gagal mencatat iuran: " + error.message);
+      toaster.create({ title: "Gagal", description: error.message, type: "error" });
     }
   };
 
-  const markAsPaid = async (id) => {
-    try {
-      const { error } = await supabase
-        .from('iuran')
-        .update({ 
-          status: "Lunas", 
-          tanggal_bayar: new Date().toISOString().split('T')[0] 
-        })
-        .eq('id', id);
-      
-      if (error) throw error;
-      toast.success("Status diperbarui menjadi Lunas");
-      fetchData();
-    } catch {
-      toast.error("Gagal memperbarui status");
-    }
-  };
+  const totalPaid = data.reduce((sum, item) => sum + (item.status === 'Lunas' ? item.jumlah : 0), 0);
+  const totalPending = data.reduce((sum, item) => sum + (item.status === 'Belum Bayar' ? item.jumlah : 0), 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Pembayaran Iuran</h1>
-          <p className="text-neutral-500">Catat dan pantau pembayaran iuran bulanan warga.</p>
-        </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={handleOpenDialog}>
-              <Plus className="h-4 w-4" />
-              Catat Pembayaran
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Catat Pembayaran Iuran</DialogTitle>
-              <DialogDescription>
-                Masukkan data pembayaran iuran secara manual.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="warga_id" className="text-right">Warga</Label>
-                  <div className="col-span-3">
-                    <Select 
-                      value={formData.warga_id} 
-                      onValueChange={(val) => setFormData({...formData, warga_id: val})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih warga" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {wargaList.map(w => (
-                          <SelectItem key={w.id} value={w.id}>{w.nama} - {w.blok}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="bulan" className="text-right">Bulan</Label>
-                  <Input 
-                    id="bulan" 
-                    value={formData.bulan}
-                    onChange={(e) => setFormData({...formData, bulan: e.target.value})}
-                    className="col-span-3"
-                    placeholder="Contoh: Januari 2025"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="jumlah" className="text-right">Jumlah</Label>
-                  <Input 
-                    id="jumlah" 
-                    type="number"
-                    value={formData.jumlah || ""}
-                    onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="tanggal_bayar" className="text-right">Tanggal</Label>
-                  <Input 
-                    id="tanggal_bayar" 
-                    type="date"
-                    value={formData.tanggal_bayar}
-                    onChange={(e) => setFormData({...formData, tanggal_bayar: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-                <Button type="submit">Catat Pembayaran</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+    <VStack spacing={8} align="stretch" width="full">
+      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
+        <Box>
+          <Heading size="lg" fontWeight="bold">Pembayaran Iuran</Heading>
+          <Text color="gray.500">Kelola dan pantau iuran bulanan warga.</Text>
+        </Box>
+        <HStack spacing={3}>
+          <DialogRoot open={isDialogOpen} onOpenChange={(e) => setIsDialogOpen(e.open)} placement="center">
+            <Button colorScheme="blue" leftIcon={<Icon as={Plus} />} onClick={handleOpenDialog}>Catat Pembayaran</Button>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Catat Pembayaran Iuran</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit}>
+                <DialogBody pb={6}>
+                  <Stack spacing={4}>
+                    <Field label="Pilih Warga" required>
+                      <SelectRoot value={[formData.warga_id]} onValueChange={(e) => setFormData({...formData, warga_id: e.value[0]})}>
+                        <SelectTrigger><SelectValueText placeholder="Pilih warga" /></SelectTrigger>
+                        <SelectContent>{wargaList.map(w => <SelectItem item={w.id} key={w.id}>{w.nama} - {w.blok}</SelectItem>)}</SelectContent>
+                      </SelectRoot>
+                    </Field>
+                    <HStack spacing={4}>
+                      <Field label="Bulan" required>
+                        <SelectRoot value={[formData.bulan.toString()]} onValueChange={(e) => setFormData({...formData, bulan: parseInt(e.value[0])})}>
+                          <SelectTrigger><SelectValueText /></SelectTrigger>
+                          <SelectContent>{months.map((m, i) => <SelectItem item={(i+1).toString()} key={i+1}>{m}</SelectItem>)}</SelectContent>
+                        </SelectRoot>
+                      </Field>
+                      <Field label="Tahun" required>
+                        <Input type="number" value={formData.tahun} onChange={(e) => setFormData({...formData, tahun: parseInt(e.target.value)})} />
+                      </Field>
+                    </HStack>
+                    <HStack spacing={4}>
+                      <Field label="Jumlah (Rp)" required>
+                        <Input type="number" value={formData.jumlah} onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value)})} />
+                      </Field>
+                      <Field label="Tanggal" required>
+                        <Input type="date" value={formData.tanggal_bayar} onChange={(e) => setFormData({...formData, tanggal_bayar: e.target.value})} />
+                      </Field>
+                    </HStack>
+                  </Stack>
+                </DialogBody>
+                <DialogFooter>
+                  <DialogActionTrigger asChild><Button variant="ghost">Batal</Button></DialogActionTrigger>
+                  <Button type="submit" colorScheme="blue">Simpan</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </DialogRoot>
+        </HStack>
+      </Flex>
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center">
-        <div className="flex flex-1 items-center space-x-2 bg-white p-4 rounded-lg border">
-          <Search className="h-5 w-5 text-neutral-400" />
-          <Input
-            placeholder="Cari nama warga atau blok..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm border-0 shadow-none focus-visible:ring-0 px-0"
-          />
-        </div>
-        <div className="flex items-center gap-2 bg-white p-4 rounded-lg border">
-          <Filter className="h-4 w-4 text-neutral-400" />
-          <Select value={filterMonth} onValueChange={setFilterMonth}>
-            <SelectTrigger className="w-[180px] border-0 focus-visible:ring-0 shadow-none">
-              <SelectValue placeholder="Semua Bulan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Semua">Semua Bulan</SelectItem>
-              <SelectItem value="Januari 2025">Januari 2025</SelectItem>
-              <SelectItem value="Februari 2025">Februari 2025</SelectItem>
-              <SelectItem value="Maret 2025">Maret 2025</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+        <Box bg="white" p={5} borderRadius="xl" shadow="sm" borderLeft="4px solid" borderLeftColor="blue.500">
+          <Text fontSize="sm" color="gray.500">Total Terkumpul</Text>
+          <Text fontSize="2xl" fontWeight="bold">Rp {totalPaid.toLocaleString('id-ID')}</Text>
+        </Box>
+        <Box bg="white" p={5} borderRadius="xl" shadow="sm" borderLeft="4px solid" borderLeftColor="orange.500">
+          <Text fontSize="sm" color="gray.500">Total Belum Bayar</Text>
+          <Text fontSize="2xl" fontWeight="bold">Rp {totalPending.toLocaleString('id-ID')}</Text>
+        </Box>
+        <Box bg="white" p={5} borderRadius="xl" shadow="sm" borderLeft="4px solid" borderLeftColor="green.500">
+          <Text fontSize="sm" color="gray.500">Target</Text>
+          <Text fontSize="2xl" fontWeight="bold">Rp {(totalPaid + totalPending).toLocaleString('id-ID')}</Text>
+        </Box>
+      </SimpleGrid>
 
-      <div className="rounded-md border bg-white overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-neutral-50/50">
-              <TableHead>Nama Warga</TableHead>
-              <TableHead>Blok</TableHead>
-              <TableHead>Bulan</TableHead>
-              <TableHead>Tanggal Bayar</TableHead>
-              <TableHead className="text-right">Jumlah</TableHead>
-              <TableHead className="text-right">Status</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <Box bg="white" p={4} borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100">
+        <Flex direction={{ base: "column", lg: "row" }} gap={4}>
+          <InputGroup startElement={<Icon as={Search} color="gray.400" />} flex="1">
+            <Input placeholder="Cari nama atau blok..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} bg="gray.50" border="none" />
+          </InputGroup>
+          <HStack spacing={3}>
+            <SelectRoot value={[filterMonth.toString()]} onValueChange={(e) => setFilterMonth(parseInt(e.value[0]))} width="160px">
+              <SelectTrigger><SelectValueText placeholder="Pilih Bulan" /></SelectTrigger>
+              <SelectContent>{months.map((m, i) => <SelectItem item={(i+1).toString()} key={i+1}>{m}</SelectItem>)}</SelectContent>
+            </SelectRoot>
+            <SelectRoot value={[filterYear.toString()]} onValueChange={(e) => setFilterYear(parseInt(e.value[0]))} width="120px">
+              <SelectTrigger><SelectValueText placeholder="Tahun" /></SelectTrigger>
+              <SelectContent>{[2024, 2025, 2026].map(y => <SelectItem item={y.toString()} key={y}>{y}</SelectItem>)}</SelectContent>
+            </SelectRoot>
+          </HStack>
+        </Flex>
+      </Box>
+
+      <Box bg="white" borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100" overflow="hidden">
+        <Table.Root variant="simple">
+          <Table.Header bg="gray.50">
+            <Table.Row>
+              <Table.ColumnHeader>Warga</Table.ColumnHeader>
+              <Table.ColumnHeader>Blok</Table.ColumnHeader>
+              <Table.ColumnHeader>Bulan</Table.ColumnHeader>
+              <Table.ColumnHeader>Jumlah</Table.ColumnHeader>
+              <Table.ColumnHeader>Tanggal</Table.ColumnHeader>
+              <Table.ColumnHeader>Status</Table.ColumnHeader>
+              <Table.ColumnHeader textAlign="right">Aksi</Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  <div className="flex items-center justify-center gap-2 text-neutral-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Memuat data pembayaran...
-                  </div>
-                </TableCell>
-              </TableRow>
+              <Table.Row>
+                <Table.Cell colSpan={7} py={10}>
+                  <Center><Spinner size="sm" mr={3} /> Memuat...</Center>
+                </Table.Cell>
+              </Table.Row>
             ) : filteredData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-neutral-500">
-                  Tidak ada data pembayaran ditemukan.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredData.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium text-neutral-900">{item.warga?.nama}</TableCell>
-                  <TableCell>{item.warga?.blok}</TableCell>
-                  <TableCell>{item.bulan}</TableCell>
-                  <TableCell>{item.tanggal_bayar || "-"}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="outline" className={
-                      item.status === "Lunas" ? "bg-green-50 text-green-700 border-green-200" : 
-                      item.status === "Sebagian" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                      "bg-red-50 text-red-700 border-red-200"
-                    }>
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {item.status !== "Lunas" && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-green-600 hover:text-green-700 hover:bg-green-50 gap-1"
-                        onClick={() => markAsPaid(item.id)}
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        Tandai Lunas
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+              <Table.Row>
+                <Table.Cell colSpan={7} textAlign="center" py={10}>Tidak ada data.</Table.Cell>
+              </Table.Row>
+            ) : filteredData.map((item) => (
+              <Table.Row key={item.id}>
+                <Table.Cell fontWeight="medium">{item.warga?.nama}</Table.Cell>
+                <Table.Cell>{item.warga?.blok}</Table.Cell>
+                <Table.Cell>{months[item.bulan-1]} {item.tahun}</Table.Cell>
+                <Table.Cell>Rp {item.jumlah.toLocaleString('id-ID')}</Table.Cell>
+                <Table.Cell>{item.tanggal_bayar || '-'}</Table.Cell>
+                <Table.Cell><Badge variant="outline" colorScheme={item.status === 'Lunas' ? 'green' : 'orange'}>{item.status}</Badge></Table.Cell>
+                <Table.Cell textAlign="right"><Button variant="ghost" size="sm">Detail</Button></Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </Box>
+    </VStack>
   );
 }

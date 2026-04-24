@@ -1,34 +1,45 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, Edit, Trash2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Edit, Trash2 } from "lucide-react";
 import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Input,
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Badge,
+  Icon,
+  Spinner,
+  Center,
+  Stack,
+} from "@chakra-ui/react";
+import { InputGroup } from "@/components/ui/chakra/input-group";
 import {
-  Dialog,
+  DialogRoot,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+  DialogBody,
+  DialogFooter,
+  DialogActionTrigger,
+} from "@/components/ui/chakra/dialog";
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/chakra/select";
+import { Field } from "@/components/ui/chakra/field";
+import { toaster } from "@/components/ui/chakra/toaster";
 import { supabase } from "@/lib/supabase";
 
 export default function DataWarga() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
@@ -43,32 +54,41 @@ export default function DataWarga() {
     status_iuran: "Belum Bayar"
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const fetchData = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchData(searchTerm);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const fetchData = async (search = "") => {
     try {
       setLoading(true);
-      const { data: residents, error } = await supabase
-        .from('warga')
-        .select('*')
-        .order('created_at', { ascending: true });
+      let query = supabase.from('warga').select('*').order('created_at', { ascending: true });
+      
+      if (search) {
+        query = query.or(`nama.ilike.%${search}%,blok.ilike.%${search}%`);
+      }
+
+      const { data: residents, error } = await query;
       
       if (error) throw error;
       setData(residents || []);
     } catch (error) {
       console.error('Error fetching data:', error.message);
-      toast.error("Gagal mengambil data dari database");
+      toaster.create({
+        title: "Gagal mengambil data",
+        description: error.message,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredData = data.filter(item => 
-    item.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.blok.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredData = data;
 
   const handleOpenDialog = (item = null) => {
     if (item) {
@@ -107,19 +127,31 @@ export default function DataWarga() {
           .eq('id', editingId);
         
         if (error) throw error;
-        toast.success("Data warga berhasil diperbarui");
+        toaster.create({
+          title: "Berhasil",
+          description: "Data warga berhasil diperbarui",
+          type: "success",
+        });
       } else {
         const { error } = await supabase
           .from('warga')
           .insert([formData]);
         
         if (error) throw error;
-        toast.success("Warga baru berhasil ditambahkan");
+        toaster.create({
+          title: "Berhasil",
+          description: "Warga baru berhasil ditambahkan",
+          type: "success",
+        });
       }
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error("Terjadi kesalahan: " + error.message);
+      toaster.create({
+        title: "Terjadi kesalahan",
+        description: error.message,
+        type: "error",
+      });
     }
   };
 
@@ -133,210 +165,228 @@ export default function DataWarga() {
         .eq('id', id);
       
       if (error) throw error;
-      toast.success("Data warga dihapus");
+      toaster.create({
+        title: "Berhasil",
+        description: "Data warga dihapus",
+        type: "success",
+      });
       fetchData();
     } catch (error) {
-      toast.error("Gagal menghapus data: " + error.message);
+      toaster.create({
+        title: "Gagal menghapus data",
+        description: error.message,
+        type: "error",
+      });
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Data Warga</h1>
-          <p className="text-neutral-500">Kelola informasi warga, status hunian, dan iuran.</p>
-        </div>
+    <VStack spacing={6} align="stretch" width="full">
+      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
+        <Box>
+          <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Data Warga</Heading>
+          <Text color="gray.500">Kelola informasi warga, status hunian, dan iuran.</Text>
+        </Box>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4" />
-              Tambah Warga
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+        <DialogRoot 
+          open={isDialogOpen} 
+          onOpenChange={(e) => setIsDialogOpen(e.open)}
+          placement="center"
+        >
+          <Button colorScheme="blue" leftIcon={<Icon as={Plus} boxSize={4} />} onClick={() => handleOpenDialog()}>
+            Tambah Warga
+          </Button>
+          
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingId ? "Edit Data Warga" : "Tambah Warga Baru"}</DialogTitle>
-              <DialogDescription>
-                Masukkan detail informasi warga di sini. Klik simpan setelah selesai.
-              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="nama" className="text-right">Nama</Label>
-                  <Input 
-                    id="nama" 
-                    value={formData.nama}
-                    onChange={(e) => setFormData({...formData, nama: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="blok" className="text-right">Blok/No</Label>
-                  <Input 
-                    id="blok" 
-                    placeholder="Contoh: A-12"
-                    value={formData.blok}
-                    onChange={(e) => setFormData({...formData, blok: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="no_hp" className="text-right">No. HP</Label>
-                  <Input 
-                    id="no_hp" 
-                    value={formData.no_hp}
-                    onChange={(e) => setFormData({...formData, no_hp: e.target.value})}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="email" className="text-right">Email</Label>
-                  <Input 
-                    id="email" 
-                    type="email"
-                    placeholder="email@perumahan.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="role" className="text-right">Role</Label>
-                  <div className="col-span-3">
-                    <Select value={formData.role} onValueChange={(val) => setFormData({...formData, role: val})}>
+              <DialogBody pb={6}>
+                <Stack spacing={4}>
+                  <Field label="Nama Lengkap" required>
+                    <Input 
+                      value={formData.nama}
+                      onChange={(e) => setFormData({...formData, nama: e.target.value})}
+                      placeholder="Masukkan nama lengkap"
+                    />
+                  </Field>
+                  
+                  <Field label="Blok/No Rumah" required>
+                    <Input 
+                      placeholder="Contoh: A-12"
+                      value={formData.blok}
+                      onChange={(e) => setFormData({...formData, blok: e.target.value})}
+                    />
+                  </Field>
+                  
+                  <HStack spacing={4}>
+                    <Field label="No. HP">
+                      <Input 
+                        value={formData.no_hp}
+                        onChange={(e) => setFormData({...formData, no_hp: e.target.value})}
+                      />
+                    </Field>
+                    
+                    <Field label="Email">
+                      <Input 
+                        type="email"
+                        placeholder="email@perumahan.com"
+                        value={formData.email}
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      />
+                    </Field>
+                  </HStack>
+                  
+                  <Field label="Level Akses / Role">
+                    <SelectRoot 
+                      value={[formData.role]} 
+                      onValueChange={(e) => setFormData({...formData, role: e.value[0]})}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih Role" />
+                        <SelectValueText placeholder="Pilih Role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="resident">Warga / Resident</SelectItem>
-                        <SelectItem value="admin">Admin Perumahan</SelectItem>
-                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                        <SelectItem item="resident" key="resident">Warga / Resident</SelectItem>
+                        <SelectItem item="admin" key="admin">Admin Perumahan</SelectItem>
+                        <SelectItem item="super_admin" key="super_admin">Super Admin</SelectItem>
                       </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="status_hunian" className="text-right">Status</Label>
-                  <div className="col-span-3">
-                    <Select value={formData.status_hunian} onValueChange={(val) => setFormData({...formData, status_hunian: val})}>
+                    </SelectRoot>
+                  </Field>
+                  
+                  <Field label="Status Hunian">
+                    <SelectRoot 
+                      value={[formData.status_hunian]} 
+                      onValueChange={(e) => setFormData({...formData, status_hunian: e.value[0]})}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih status hunian" />
+                        <SelectValueText placeholder="Pilih Status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Pemilik">Pemilik</SelectItem>
-                        <SelectItem value="Kontrak">Kontrak</SelectItem>
-                        <SelectItem value="Kos">Kos</SelectItem>
+                        <SelectItem item="Pemilik" key="Pemilik">Pemilik</SelectItem>
+                        <SelectItem item="Kontrak" key="Kontrak">Kontrak</SelectItem>
+                        <SelectItem item="Kos" key="Kos">Kos</SelectItem>
                       </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
+                    </SelectRoot>
+                  </Field>
+                </Stack>
+              </DialogBody>
+              
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-                <Button type="submit">Simpan Data</Button>
+                <DialogActionTrigger asChild>
+                  <Button variant="ghost">Batal</Button>
+                </DialogActionTrigger>
+                <Button type="submit" colorScheme="blue">Simpan Data</Button>
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+        </DialogRoot>
+      </Flex>
 
-      <div className="flex items-center space-x-2 bg-white p-4 rounded-lg border">
-        <Search className="h-5 w-5 text-neutral-400" />
-        <Input
-          placeholder="Cari nama atau blok rumah..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm border-0 shadow-none focus-visible:ring-0 px-0"
-        />
-      </div>
+      <Box bg="white" p={4} borderRadius="lg" border="1px solid" borderColor="gray.200">
+        <InputGroup startElement={<Icon as={Search} color="gray.400" />}>
+          <Input
+            placeholder="Cari nama atau blok rumah..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            border="none"
+            _focus={{ boxShadow: "none" }}
+            maxWidth="sm"
+          />
+        </InputGroup>
+      </Box>
 
-      <div className="rounded-md border bg-white overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-neutral-50/50">
-              <TableHead className="w-[50px]">No</TableHead>
-              <TableHead>Nama Warga</TableHead>
-              <TableHead>Email / Akun</TableHead>
-              <TableHead>Blok/No</TableHead>
-              <TableHead>No. HP</TableHead>
-              <TableHead>Status Hunian</TableHead>
-              <TableHead>Status Iuran</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  <div className="flex items-center justify-center gap-2 text-neutral-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Memuat data warga...
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : filteredData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-neutral-500">
-                  Tidak ada data warga ditemukan.
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredData.map((warga, index) => (
-                <TableRow key={warga.id}>
-                  <TableCell className="font-medium text-neutral-500">{index + 1}</TableCell>
-                  <TableCell className="font-medium text-neutral-900">{warga.nama}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="text-sm">{warga.email || "-"}</span>
-                      {warga.role && (
-                        <span className="text-[10px] uppercase font-bold text-blue-600">
-                          {warga.role}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{warga.blok}</TableCell>
-                  <TableCell>{warga.no_hp || "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={
-                      warga.status_hunian === "Pemilik" ? "bg-blue-50 text-blue-700 border-blue-200" : 
-                      "bg-orange-50 text-orange-700 border-orange-200"
-                    }>
-                      {warga.status_hunian}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={
-                      warga.status_iuran === "Lunas" ? "bg-green-50 text-green-700 border-green-200" : 
-                      warga.status_iuran === "Sebagian" ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
-                      "bg-red-50 text-red-700 border-red-200"
-                    }>
-                      {warga.status_iuran || "Belum Bayar"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(warga)}>
-                        <Edit className="h-4 w-4 text-blue-600" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(warga.id)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                        <span className="sr-only">Hapus</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
+        <Box overflowX="auto">
+          <Table.Root variant="simple">
+            <Table.Header bg="gray.50">
+              <Table.Row>
+                <Table.ColumnHeader width="50px">No</Table.ColumnHeader>
+                <Table.ColumnHeader>Nama Warga</Table.ColumnHeader>
+                <Table.ColumnHeader>Email / Akun</Table.ColumnHeader>
+                <Table.ColumnHeader>Blok/No</Table.ColumnHeader>
+                <Table.ColumnHeader>No. HP</Table.ColumnHeader>
+                <Table.ColumnHeader>Status Hunian</Table.ColumnHeader>
+                <Table.ColumnHeader>Status Iuran</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Aksi</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {loading ? (
+                <Table.Row>
+                  <Table.Cell colSpan={8} py={10}>
+                    <Center>
+                      <HStack spacing={3} color="gray.500">
+                        <Spinner size="sm" />
+                        <Text>Memuat data warga...</Text>
+                      </HStack>
+                    </Center>
+                  </Table.Cell>
+                </Table.Row>
+              ) : filteredData.length === 0 ? (
+                <Table.Row>
+                  <Table.Cell colSpan={8} textAlign="center" py={10} color="gray.500">
+                    Tidak ada data warga ditemukan.
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                filteredData.map((warga, index) => (
+                  <Table.Row key={warga.id}>
+                    <Table.Cell color="gray.500">{index + 1}</Table.Cell>
+                    <Table.Cell fontWeight="medium" color="gray.900">{warga.nama}</Table.Cell>
+                    <Table.Cell>
+                      <VStack align="start" spacing={0}>
+                        <Text fontSize="sm">{warga.email || "-"}</Text>
+                        {warga.role && (
+                          <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="blue.600">
+                            {warga.role}
+                          </Text>
+                        )}
+                      </VStack>
+                    </Table.Cell>
+                    <Table.Cell>{warga.blok}</Table.Cell>
+                    <Table.Cell>{warga.no_hp || "-"}</Table.Cell>
+                    <Table.Cell>
+                      <Badge 
+                        variant="outline" 
+                        colorScheme={warga.status_hunian === "Pemilik" ? "blue" : "orange"}
+                        bg={warga.status_hunian === "Pemilik" ? "blue.50" : "orange.50"}
+                      >
+                        {warga.status_hunian}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge 
+                        variant="outline" 
+                        colorScheme={
+                          warga.status_iuran === "Lunas" ? "green" : 
+                          warga.status_iuran === "Sebagian" ? "yellow" : "red"
+                        }
+                        bg={
+                          warga.status_iuran === "Lunas" ? "green.50" : 
+                          warga.status_iuran === "Sebagian" ? "yellow.50" : "red.50"
+                        }
+                      >
+                        {warga.status_iuran || "Belum Bayar"}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell textAlign="right">
+                      <HStack justify="end" spacing={2}>
+                        <Button variant="ghost" size="sm" p={1} onClick={() => handleOpenDialog(warga)}>
+                          <Icon as={Edit} boxSize={4} color="blue.600" />
+                        </Button>
+                        <Button variant="ghost" size="sm" p={1} onClick={() => handleDelete(warga.id)}>
+                          <Icon as={Trash2} boxSize={4} color="red.600" />
+                        </Button>
+                      </HStack>
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Box>
+      </Box>
+    </VStack>
   );
 }

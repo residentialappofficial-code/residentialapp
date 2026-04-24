@@ -1,31 +1,44 @@
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Input,
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Badge,
+  Icon,
+  Spinner,
+  Center,
+  Stack,
+} from "@chakra-ui/react";
 import {
-  Dialog,
+  DialogRoot,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+  DialogBody,
+  DialogFooter,
+  DialogActionTrigger,
+} from "@/components/ui/chakra/dialog";
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/chakra/select";
+import { Field } from "@/components/ui/chakra/field";
+import { toaster } from "@/components/ui/chakra/toaster";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function DataPengurus() {
+  const { profile } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -48,12 +61,16 @@ export default function DataPengurus() {
       const { data: staff, error } = await supabase
         .from('pengurus')
         .select('*')
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: true })
+        .limit(100);
       
       if (error) throw error;
       setData(staff || []);
     } catch {
-      toast.error("Gagal mengambil data pengurus");
+      toaster.create({
+        title: "Gagal mengambil data pengurus",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -90,19 +107,34 @@ export default function DataPengurus() {
           .eq('id', editingId);
         
         if (error) throw error;
-        toast.success("Data pengurus berhasil diperbarui");
+        toaster.create({
+          title: "Berhasil",
+          description: "Data pengurus berhasil diperbarui",
+          type: "success",
+        });
       } else {
         const { error } = await supabase
           .from('pengurus')
-          .insert([formData]);
+          .insert([{ 
+            ...formData, 
+            perumahan_id: profile?.perumahan_id 
+          }]);
         
         if (error) throw error;
-        toast.success("Pengurus baru berhasil ditambahkan");
+        toaster.create({
+          title: "Berhasil",
+          description: "Pengurus baru berhasil ditambahkan",
+          type: "success",
+        });
       }
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error("Kesalahan: " + error.message);
+      toaster.create({
+        title: "Terjadi kesalahan",
+        description: error.message,
+        type: "error",
+      });
     }
   };
 
@@ -115,158 +147,170 @@ export default function DataPengurus() {
         .eq('id', id);
       
       if (error) throw error;
-      toast.success("Data pengurus dihapus");
+      toaster.create({
+        title: "Berhasil",
+        description: "Data pengurus dihapus",
+        type: "success",
+      });
       fetchData();
     } catch (error) {
-      toast.error("Gagal menghapus: " + error.message);
+      toaster.create({
+        title: "Gagal menghapus",
+        description: error.message,
+        type: "error",
+      });
     }
   };
 
-  const getJabatanBadgeColor = (jabatan) => {
-    if (jabatan.includes("Ketua")) return "bg-blue-50 text-blue-700 border-blue-200";
-    if (jabatan.includes("Sekretaris") || jabatan.includes("Bendahara")) return "bg-purple-50 text-purple-700 border-purple-200";
-    return "bg-neutral-100 text-neutral-700 border-neutral-200";
+  const getJabatanColor = (jabatan) => {
+    if (jabatan.includes("Ketua")) return "blue";
+    if (jabatan.includes("Sekretaris") || jabatan.includes("Bendahara")) return "purple";
+    return "gray";
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Data Pengurus Paguyuban</h1>
-          <p className="text-neutral-500">Kelola informasi kepengurusan RT/RW atau Paguyuban Perumahan.</p>
-        </div>
+    <VStack spacing={6} align="stretch" width="full">
+      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
+        <Box>
+          <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Data Pengurus Paguyuban</Heading>
+          <Text color="gray.500">Kelola informasi kepengurusan RT/RW atau Paguyuban Perumahan.</Text>
+        </Box>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4" />
-              Tambah Pengurus
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+        <DialogRoot 
+          open={isDialogOpen} 
+          onOpenChange={(e) => setIsDialogOpen(e.open)}
+          placement="center"
+        >
+          <Button colorScheme="blue" leftIcon={<Icon as={Plus} boxSize={4} />} onClick={() => handleOpenDialog()}>
+            Tambah Pengurus
+          </Button>
+          
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingId ? "Edit Data Pengurus" : "Tambah Pengurus"}</DialogTitle>
-              <DialogDescription>
-                Masukkan detail informasi pengurus di sini.
-              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="nama" className="text-right">Nama</Label>
-                  <Input 
-                    id="nama" 
-                    value={formData.nama}
-                    onChange={(e) => setFormData({...formData, nama: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="jabatan" className="text-right">Jabatan</Label>
-                  <div className="col-span-3">
-                    <Select value={formData.jabatan} onValueChange={(val) => setFormData({...formData, jabatan: val})}>
+              <DialogBody pb={6}>
+                <Stack spacing={4}>
+                  <Field label="Nama Lengkap" required>
+                    <Input 
+                      value={formData.nama}
+                      onChange={(e) => setFormData({...formData, nama: e.target.value})}
+                      placeholder="Nama lengkap pengurus"
+                    />
+                  </Field>
+                  
+                  <Field label="Jabatan" required>
+                    <SelectRoot 
+                      value={[formData.jabatan]} 
+                      onValueChange={(e) => setFormData({...formData, jabatan: e.value[0]})}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih jabatan" />
+                        <SelectValueText placeholder="Pilih jabatan" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Ketua Paguyuban">Ketua</SelectItem>
-                        <SelectItem value="Wakil Ketua">Wakil Ketua</SelectItem>
-                        <SelectItem value="Sekretaris">Sekretaris</SelectItem>
-                        <SelectItem value="Bendahara">Bendahara</SelectItem>
-                        <SelectItem value="Seksi Keamanan">Seksi Keamanan</SelectItem>
-                        <SelectItem value="Seksi Lingkungan">Seksi Lingkungan</SelectItem>
-                        <SelectItem value="Anggota">Anggota</SelectItem>
+                        <SelectItem item="Ketua Paguyuban" key="Ketua Paguyuban">Ketua</SelectItem>
+                        <SelectItem item="Wakil Ketua" key="Wakil Ketua">Wakil Ketua</SelectItem>
+                        <SelectItem item="Sekretaris" key="Sekretaris">Sekretaris</SelectItem>
+                        <SelectItem item="Bendahara" key="Bendahara">Bendahara</SelectItem>
+                        <SelectItem item="Seksi Keamanan" key="Seksi Keamanan">Seksi Keamanan</SelectItem>
+                        <SelectItem item="Seksi Lingkungan" key="Seksi Lingkungan">Seksi Lingkungan</SelectItem>
+                        <SelectItem item="Anggota" key="Anggota">Anggota</SelectItem>
                       </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="no_hp" className="text-right">No. HP</Label>
-                  <Input 
-                    id="no_hp" 
-                    value={formData.no_hp}
-                    onChange={(e) => setFormData({...formData, no_hp: e.target.value})}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="periode" className="text-right">Periode</Label>
-                  <Input 
-                    id="periode" 
-                    placeholder="Contoh: 2025-2027"
-                    value={formData.periode}
-                    onChange={(e) => setFormData({...formData, periode: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-              </div>
+                    </SelectRoot>
+                  </Field>
+                  
+                  <Field label="No. HP">
+                    <Input 
+                      value={formData.no_hp}
+                      onChange={(e) => setFormData({...formData, no_hp: e.target.value})}
+                      placeholder="0812..."
+                    />
+                  </Field>
+                  
+                  <Field label="Periode Jabatan" required>
+                    <Input 
+                      placeholder="Contoh: 2025-2027"
+                      value={formData.periode}
+                      onChange={(e) => setFormData({...formData, periode: e.target.value})}
+                    />
+                  </Field>
+                </Stack>
+              </DialogBody>
+              
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-                <Button type="submit">Simpan Data</Button>
+                <DialogActionTrigger asChild>
+                  <Button variant="ghost">Batal</Button>
+                </DialogActionTrigger>
+                <Button type="submit" colorScheme="blue">Simpan Data</Button>
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+        </DialogRoot>
+      </Flex>
 
-      <div className="rounded-md border bg-white overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-neutral-50/50">
-              <TableHead>Nama Pengurus</TableHead>
-              <TableHead>Jabatan</TableHead>
-              <TableHead>No. HP</TableHead>
-              <TableHead>Periode</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <div className="flex items-center justify-center gap-2 text-neutral-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Memuat data pengurus...
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-neutral-500">
-                  Belum ada data pengurus.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium text-neutral-900">{item.nama}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={getJabatanBadgeColor(item.jabatan)}>
-                      {item.jabatan}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{item.no_hp || "-"}</TableCell>
-                  <TableCell>{item.periode}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(item)}>
-                        <Edit className="h-4 w-4 text-blue-600" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                        <span className="sr-only">Hapus</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
+        <Box overflowX="auto">
+          <Table.Root variant="simple">
+            <Table.Header bg="gray.50">
+              <Table.Row>
+                <Table.ColumnHeader>Nama Pengurus</Table.ColumnHeader>
+                <Table.ColumnHeader>Jabatan</Table.ColumnHeader>
+                <Table.ColumnHeader>No. HP</Table.ColumnHeader>
+                <Table.ColumnHeader>Periode</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Aksi</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {loading ? (
+                <Table.Row>
+                  <Table.Cell colSpan={5} py={10}>
+                    <Center>
+                      <HStack spacing={3} color="gray.500">
+                        <Spinner size="sm" />
+                        <Text>Memuat data pengurus...</Text>
+                      </HStack>
+                    </Center>
+                  </Table.Cell>
+                </Table.Row>
+              ) : data.length === 0 ? (
+                <Table.Row>
+                  <Table.Cell colSpan={5} textAlign="center" py={10} color="gray.500">
+                    Belum ada data pengurus.
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                data.map((item) => (
+                  <Table.Row key={item.id}>
+                    <Table.Cell fontWeight="medium" color="gray.900">{item.nama}</Table.Cell>
+                    <Table.Cell>
+                      <Badge 
+                        variant="outline" 
+                        colorScheme={getJabatanColor(item.jabatan)}
+                        bg={`${getJabatanColor(item.jabatan)}.50`}
+                      >
+                        {item.jabatan}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell>{item.no_hp || "-"}</Table.Cell>
+                    <Table.Cell>{item.periode}</Table.Cell>
+                    <Table.Cell textAlign="right">
+                      <HStack justify="end" spacing={2}>
+                        <Button variant="ghost" size="sm" p={1} onClick={() => handleOpenDialog(item)}>
+                          <Icon as={Edit} boxSize={4} color="blue.600" />
+                        </Button>
+                        <Button variant="ghost" size="sm" p={1} onClick={() => handleDelete(item.id)}>
+                          <Icon as={Trash2} boxSize={4} color="red.600" />
+                        </Button>
+                      </HStack>
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Box>
+      </Box>
+    </VStack>
   );
 }

@@ -1,12 +1,21 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { Loader2, UserPlus } from "lucide-react";
+import {
+  Box,
+  Button,
+  Heading,
+  Input,
+  Stack,
+  Text,
+  VStack,
+  Center,
+  Icon,
+  Flex,
+} from "@chakra-ui/react";
+import { Field } from "@/components/ui/chakra/field";
+import { toaster } from "@/components/ui/chakra/toaster";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -19,98 +28,144 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error: authError } = await supabase.auth.signUp({ email, password });
+      const { error: authError } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            nama: nama,
+            role: 'admin', // Default to admin for the person who registers the complex
+          }
+        }
+      });
       if (authError) throw authError;
 
-      const { error: dbError } = await supabase.from('warga').insert([{
-        nama,
-        email,
-        user_id: data.session?.user?.id || data.user?.id,
-        role: 'admin',
-        blok: 'OWNER-00',
-        status_hunian: 'Pemilik',
-      }]);
-      if (dbError) throw dbError;
-
-      toast.success("Akun berhasil dibuat! Silakan cek email konfirmasi lalu login.");
+      toaster.create({
+        title: "Registrasi berhasil!",
+        description: "Profil Anda sedang disiapkan secara otomatis. Silakan cek email konfirmasi lalu login.",
+        type: "success",
+      });
       navigate("/login");
     } catch (error) {
-      toast.error("Gagal: " + error.message);
+      toaster.create({
+        title: "Gagal Registrasi",
+        description: error.message,
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-neutral-50 p-4">
-      <Card className="w-full max-w-md shadow-xl border-t-4 border-t-indigo-600">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg">
-              <UserPlus className="h-8 w-8 text-white" />
-            </div>
-          </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Daftar Pengelola</CardTitle>
-          <CardDescription className="text-neutral-500">
-            Daftarkan diri Anda sebagai Pengelola/Admin Perumahan.
-          </CardDescription>
-        </CardHeader>
+    <Center minHeight="100vh" width="100vw" bg="gray.50" p={6}>
+      <Box
+        width="full"
+        maxWidth="md"
+        bg="white"
+        boxShadow="0 10px 30px rgba(0, 0, 0, 0.04)"
+        border="1px solid"
+        borderColor="gray.100"
+        borderRadius="24px"
+        overflow="hidden"
+      >
+        <VStack spacing={2} p={10} pb={4} textAlign="center">
+          <Center mb={4}>
+            <Flex p={4} borderRadius="20px" bg="emerald.50" color="emerald.600">
+              <Icon as={UserPlus} boxSize={8} />
+            </Flex>
+          </Center>
+          <Heading size="xl" fontWeight="900" color="gray.900" letterSpacing="-0.03em">
+            Register your complex
+          </Heading>
+          <Text color="gray.500" fontWeight="600" fontSize="sm">
+            Sign up as an administrator to start managing.
+          </Text>
+        </VStack>
 
         <form onSubmit={handleRegister}>
-          <CardContent className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label htmlFor="nama">Nama Lengkap</Label>
+          <VStack spacing={5} p={10} pt={4}>
+            <Field label="Full Name" required>
               <Input
-                id="nama"
-                placeholder="Contoh: Budi Santoso"
-                required
+                placeholder="e.g. John Doe"
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
+                height="12"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.100"
+                borderRadius="12px"
+                _focus={{ borderColor: "emerald.400", boxShadow: "0 0 0 4px rgba(16, 185, 129, 0.1)" }}
+                fontWeight="600"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Alamat Email</Label>
+            </Field>
+            
+            <Field label="Work Email" required>
               <Input
-                id="email"
                 type="email"
-                placeholder="nama@email.com"
-                required
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                height="12"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.100"
+                borderRadius="12px"
+                _focus={{ borderColor: "emerald.400", boxShadow: "0 0 0 4px rgba(16, 185, 129, 0.1)" }}
+                fontWeight="600"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Kata Sandi</Label>
+            </Field>
+            
+            <Field label="Create Password" required>
               <Input
-                id="password"
                 type="password"
-                placeholder="Minimal 6 karakter"
-                required
+                placeholder="Min. 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                height="12"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.100"
+                borderRadius="12px"
+                _focus={{ borderColor: "emerald.400", boxShadow: "0 0 0 4px rgba(16, 185, 129, 0.1)" }}
+                fontWeight="600"
               />
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col space-y-3 pt-2">
-            <Button
-              type="submit"
-              className="w-full h-11 text-white font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-all"
-              disabled={loading}
-            >
-              {loading ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Memproses...</>
-              ) : (
-                "Daftar Akun Admin"
-              )}
-            </Button>
-
-            <Button variant="ghost" type="button" className="w-full text-neutral-500" asChild>
-              <Link to="/login">Kembali ke Login</Link>
-            </Button>
-          </CardFooter>
+            </Field>
+            
+            <VStack width="full" spacing={3} pt={4}>
+              <Button
+                type="submit"
+                width="full"
+                height="14"
+                bg="emerald.500"
+                color="white"
+                borderRadius="14px"
+                _hover={{ bg: "emerald.600", transform: "translateY(-1px)" }}
+                _active={{ transform: "translateY(0)" }}
+                fontWeight="900"
+                isLoading={loading}
+                boxShadow="0 10px 15px -3px rgba(16, 185, 129, 0.2)"
+              >
+                Create Account
+              </Button>
+              
+              <Button
+                as={RouterLink}
+                to="/login"
+                variant="ghost"
+                width="full"
+                height="12"
+                color="gray.400"
+                fontWeight="800"
+                borderRadius="12px"
+                _hover={{ bg: "gray.50", color: "emerald.600" }}
+              >
+                Back to Login
+              </Button>
+            </VStack>
+          </VStack>
         </form>
-      </Card>
-    </div>
+      </Box>
+    </Center>
   );
 }

@@ -1,16 +1,35 @@
 import { useState, useEffect } from "react";
 import { Send, MessageSquarePlus, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Textarea,
+  Badge,
+  Icon,
+  Spinner,
+  Center,
+  Stack,
+  Tabs,
+} from "@chakra-ui/react";
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/chakra/select";
+import { Avatar } from "@/components/ui/chakra/avatar";
+import { toaster } from "@/components/ui/chakra/toaster";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function ForumWarga() {
+  const { profile } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newPostContent, setNewPostContent] = useState("");
@@ -24,15 +43,21 @@ export default function ForumWarga() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('forum_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('forum_posts').select('*');
+      
+      if (profile?.role !== 'super_admin') {
+        query = query.eq('perumahan_id', profile?.perumahan_id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
       setPosts(data || []);
     } catch {
-      toast.error("Gagal mengambil postingan forum");
+      toaster.create({
+        title: "Gagal mengambil postingan forum",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -41,7 +66,11 @@ export default function ForumWarga() {
   const handlePostSubmit = async (e) => {
     e.preventDefault();
     if (!newPostContent.trim()) {
-      toast.error("Isi postingan tidak boleh kosong");
+      toaster.create({
+        title: "Peringatan",
+        description: "Isi postingan tidak boleh kosong",
+        type: "warning",
+      });
       return;
     }
 
@@ -49,19 +78,27 @@ export default function ForumWarga() {
       const { error } = await supabase
         .from('forum_posts')
         .insert([{
-          author: "Admin Paguyuban",
-          avatar: "A",
+          author: profile?.nama || "Warga",
+          avatar: profile?.nama?.[0] || "U",
           content: newPostContent,
           category: newPostCategory,
+          perumahan_id: profile?.perumahan_id
         }]);
 
       if (error) throw error;
       
       setNewPostContent("");
-      toast.success("Postingan berhasil diterbitkan");
+      toaster.create({
+        title: "Berhasil",
+        description: "Postingan berhasil diterbitkan",
+        type: "success",
+      });
       fetchPosts();
     } catch {
-      toast.error("Gagal mengirim postingan");
+      toaster.create({
+        title: "Gagal mengirim postingan",
+        type: "error",
+      });
     }
   };
 
@@ -70,123 +107,137 @@ export default function ForumWarga() {
     return post.category === activeTab;
   });
 
-  const getCategoryBadge = (category) => {
+  const getCategoryColor = (category) => {
     switch (category) {
-      case "Pengumuman": return "bg-blue-50 text-blue-700 border-blue-200";
-      case "Laporan": return "bg-red-50 text-red-700 border-red-200";
-      case "Diskusi": return "bg-green-50 text-green-700 border-green-200";
-      default: return "bg-neutral-50 text-neutral-700 border-neutral-200";
+      case "Pengumuman": return "blue";
+      case "Laporan": return "red";
+      case "Diskusi": return "green";
+      default: return "gray";
     }
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Forum Warga</h1>
-        <p className="text-neutral-500">Ruang diskusi, pengumuman, dan pelaporan antar warga perumahan.</p>
-      </div>
+    <VStack spacing={6} align="stretch" maxWidth="4xl" mx="auto" width="full">
+      <Box>
+        <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Forum Warga</Heading>
+        <Text color="gray.500">Ruang diskusi, pengumuman, dan pelaporan antar warga perumahan.</Text>
+      </Box>
 
-      <Card className="border shadow-sm">
-        <CardContent className="pt-6">
-          <form onSubmit={handlePostSubmit}>
-            <div className="flex gap-4">
-              <Avatar className="h-10 w-10 shrink-0">
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">A</AvatarFallback>
-              </Avatar>
-              <div className="w-full space-y-3">
-                <Textarea 
-                  placeholder="Ada informasi apa yang ingin dibagikan ke warga?"
-                  className="min-h-[100px] resize-none"
-                  value={newPostContent}
-                  onChange={(e) => setNewPostContent(e.target.value)}
-                />
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <span className="text-sm text-neutral-500">Kategori:</span>
-                    <Select value={newPostCategory} onValueChange={setNewPostCategory}>
-                      <SelectTrigger className="w-[140px] h-9">
-                        <SelectValue placeholder="Kategori" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pengumuman">Pengumuman</SelectItem>
-                        <SelectItem value="Diskusi">Diskusi</SelectItem>
-                        <SelectItem value="Laporan">Laporan</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full sm:w-auto gap-2">
-                    <Send className="h-4 w-4" />
-                    Kirim Postingan
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <Box bg="white" p={6} borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100">
+        <form onSubmit={handlePostSubmit}>
+          <Flex gap={4}>
+            <Avatar 
+              size="md" 
+              name={profile?.nama || "A"}
+              bg="blue.100" 
+              color="blue.700"
+            />
+            <VStack align="stretch" flex="1" spacing={3}>
+              <Textarea 
+                placeholder="Ada informasi apa yang ingin dibagikan ke warga?"
+                minHeight="100px"
+                resize="none"
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+              />
+              <Flex direction={{ base: "column", sm: "row" }} justify="space-between" align={{ base: "stretch", sm: "center" }} gap={3}>
+                <HStack spacing={2}>
+                  <Text fontSize="sm" color="gray.500" whiteSpace="nowrap">Kategori:</Text>
+                  <SelectRoot 
+                    value={[newPostCategory]} 
+                    onValueChange={(e) => setNewPostCategory(e.value[0])}
+                    width="140px"
+                  >
+                    <SelectTrigger height="9">
+                      <SelectValueText placeholder="Kategori" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem item="Pengumuman" key="Pengumuman">Pengumuman</SelectItem>
+                      <SelectItem item="Diskusi" key="Diskusi">Diskusi</SelectItem>
+                      <SelectItem item="Laporan" key="Laporan">Laporan</SelectItem>
+                    </SelectContent>
+                  </SelectRoot>
+                </HStack>
+                <Button type="submit" colorScheme="blue" leftIcon={<Icon as={Send} boxSize={4} />}>
+                  Kirim Postingan
+                </Button>
+              </Flex>
+            </VStack>
+          </Flex>
+        </form>
+      </Box>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[400px]">
-          <TabsTrigger value="Semua">Semua</TabsTrigger>
-          <TabsTrigger value="Pengumuman">Pengumuman</TabsTrigger>
-          <TabsTrigger value="Diskusi">Diskusi</TabsTrigger>
-          <TabsTrigger value="Laporan">Laporan</TabsTrigger>
-        </TabsList>
+      <Tabs.Root value={activeTab} onValueChange={(e) => setActiveTab(e.value)} variant="enclosed" width="full">
+        <Tabs.List bg="gray.50" p={1} borderRadius="md" border="none">
+          <Tabs.Trigger value="Semua" flex="1">Semua</Tabs.Trigger>
+          <Tabs.Trigger value="Pengumuman" flex="1">Pengumuman</Tabs.Trigger>
+          <Tabs.Trigger value="Diskusi" flex="1">Diskusi</Tabs.Trigger>
+          <Tabs.Trigger value="Laporan" flex="1">Laporan</Tabs.Trigger>
+        </Tabs.List>
         
-        <div className="mt-6 space-y-4">
+        <Box mt={6}>
           {loading ? (
-            <div className="text-center py-12 text-neutral-500 border rounded-lg bg-white">
-              <Loader2 className="mx-auto h-12 w-12 animate-spin text-neutral-300 mb-3" />
-              <p>Memuat postingan...</p>
-            </div>
+            <Center py={12} bg="white" borderRadius="lg" border="1px solid" borderColor="gray.100">
+              <VStack spacing={3}>
+                <Spinner size="xl" color="gray.300" />
+                <Text color="gray.500">Memuat postingan...</Text>
+              </VStack>
+            </Center>
           ) : filteredPosts.length === 0 ? (
-            <div className="text-center py-12 text-neutral-500 border rounded-lg bg-white">
-              <MessageSquarePlus className="mx-auto h-12 w-12 text-neutral-300 mb-3" />
-              <p>Belum ada postingan di kategori ini.</p>
-            </div>
+            <Center py={12} bg="white" borderRadius="lg" border="1px solid" borderColor="gray.100">
+              <VStack spacing={3}>
+                <Icon as={MessageSquarePlus} boxSize={12} color="gray.300" />
+                <Text color="gray.500">Belum ada postingan di kategori ini.</Text>
+              </VStack>
+            </Center>
           ) : (
-            filteredPosts.map((post) => (
-              <Card key={post.id}>
-                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-neutral-100 text-neutral-700 font-semibold">
-                      {post.avatar || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold text-neutral-900">{post.author}</p>
-                      <Badge variant="outline" className={getCategoryBadge(post.category)}>
+            <VStack spacing={4} align="stretch">
+              {filteredPosts.map((post) => (
+                <Box key={post.id} bg="white" borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100">
+                  <Box p={6}>
+                    <Flex justify="space-between" align="start" mb={4}>
+                      <HStack spacing={4}>
+                        <Avatar 
+                          size="md" 
+                          name={post.author}
+                          bg="gray.100" 
+                          color="gray.700"
+                        />
+                        <VStack align="start" spacing={0}>
+                          <Text fontWeight="semibold" color="gray.900">{post.author}</Text>
+                          <Text fontSize="xs" color="gray.500">
+                            {new Date(post.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                          </Text>
+                        </VStack>
+                      </HStack>
+                      <Badge 
+                        variant="outline" 
+                        colorScheme={getCategoryColor(post.category)}
+                        bg={`${getCategoryColor(post.category)}.50`}
+                      >
                         {post.category}
                       </Badge>
-                    </div>
-                    <p className="text-xs text-neutral-500">
-                      {new Date(post.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                    </p>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <p className="text-neutral-700 whitespace-pre-wrap leading-relaxed">
-                    {post.content}
-                  </p>
-                </CardContent>
-                <CardFooter className="pt-0 flex border-t bg-neutral-50 rounded-b-lg px-6 py-3">
-                  <div className="flex gap-6 w-full text-neutral-500">
-                    <button className="flex items-center text-sm font-medium hover:text-blue-600 transition-colors">
-                      <ThumbsUp className="mr-2 h-4 w-4" />
-                      Suka
-                    </button>
-                    <button className="flex items-center text-sm font-medium hover:text-blue-600 transition-colors">
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      {post.replies_count > 0 ? `${post.replies_count} Balasan` : "Balas"}
-                    </button>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))
+                    </Flex>
+                    <Text color="gray.700" whiteSpace="pre-wrap" lineHeight="relaxed">
+                      {post.content}
+                    </Text>
+                  </Box>
+                  <Box py={3} px={6} bg="gray.50" borderTop="1px solid" borderColor="gray.100" borderBottomRadius="xl">
+                    <HStack spacing={6}>
+                      <Button variant="ghost" size="sm" color="gray.500" leftIcon={<Icon as={ThumbsUp} boxSize={4} />} _hover={{ color: "blue.600" }}>
+                        Suka
+                      </Button>
+                      <Button variant="ghost" size="sm" color="gray.500" leftIcon={<Icon as={MessageSquare} boxSize={4} />} _hover={{ color: "blue.600" }}>
+                        {post.replies_count > 0 ? `${post.replies_count} Balasan` : "Balas"}
+                      </Button>
+                    </HStack>
+                  </Box>
+                </Box>
+              ))}
+            </VStack>
           )}
-        </div>
-      </Tabs>
-    </div>
+        </Box>
+      </Tabs.Root>
+    </VStack>
   );
 }

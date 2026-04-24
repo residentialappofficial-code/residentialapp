@@ -1,30 +1,38 @@
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Input,
+  SimpleGrid,
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Badge,
+  Icon,
+  Spinner,
+  Center,
+  Stack,
+} from "@chakra-ui/react";
 import {
-  Dialog,
+  DialogRoot,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
+  DialogBody,
+  DialogFooter,
+  DialogActionTrigger,
+} from "@/components/ui/chakra/dialog";
+import { Field } from "@/components/ui/chakra/field";
+import { toaster } from "@/components/ui/chakra/toaster";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Penggajian() {
+  const { profile } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -53,7 +61,10 @@ export default function Penggajian() {
       if (error) throw error;
       setData(payroll || []);
     } catch {
-      toast.error("Gagal mengambil data gaji");
+      toaster.create({
+        title: "Gagal mengambil data gaji",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -85,8 +96,14 @@ export default function Penggajian() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const gaji_bersih = formData.gaji_pokok + formData.tunjangan - formData.potongan;
-      const saveObj = { ...formData, gaji_bersih };
+      const gaji_bersih = Number(formData.gaji_pokok) + Number(formData.tunjangan) - Number(formData.potongan);
+      const saveObj = { 
+        ...formData, 
+        gaji_pokok: Number(formData.gaji_pokok),
+        tunjangan: Number(formData.tunjangan),
+        potongan: Number(formData.potongan),
+        gaji_bersih 
+      };
 
       if (editingId) {
         const { error } = await supabase
@@ -94,18 +111,33 @@ export default function Penggajian() {
           .update(saveObj)
           .eq('id', editingId);
         if (error) throw error;
-        toast.success("Data penggajian diperbarui");
+        toaster.create({
+          title: "Berhasil",
+          description: "Data penggajian diperbarui",
+          type: "success",
+        });
       } else {
         const { error } = await supabase
           .from('penggajian')
-          .insert([saveObj]);
+          .insert([{ 
+            ...saveObj, 
+            perumahan_id: profile?.perumahan_id 
+          }]);
         if (error) throw error;
-        toast.success("Pegawai baru ditambahkan");
+        toaster.create({
+          title: "Berhasil",
+          description: "Pegawai baru ditambahkan",
+          type: "success",
+        });
       }
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error("Kesalahan: " + error.message);
+      toaster.create({
+        title: "Terjadi kesalahan",
+        description: error.message,
+        type: "error",
+      });
     }
   };
 
@@ -117,10 +149,17 @@ export default function Penggajian() {
         .delete()
         .eq('id', id);
       if (error) throw error;
-      toast.success("Data dihapus");
+      toaster.create({
+        title: "Berhasil",
+        description: "Data dihapus",
+        type: "success",
+      });
       fetchData();
     } catch {
-      toast.error("Gagal menghapus");
+      toaster.create({
+        title: "Gagal menghapus",
+        type: "error",
+      });
     }
   };
 
@@ -129,160 +168,155 @@ export default function Penggajian() {
   }, [data]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Penggajian Staf</h1>
-          <p className="text-neutral-500">Rekap dan manajemen gaji satpam, petugas kebersihan, dll.</p>
-        </div>
+    <VStack spacing={8} align="stretch" width="full">
+      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
+        <Box>
+          <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Penggajian Staf</Heading>
+          <Text color="gray.500">Rekap dan manajemen gaji satpam, petugas kebersihan, dll.</Text>
+        </Box>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4" />
-              Tambah Pegawai
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+        <DialogRoot 
+          open={isDialogOpen} 
+          onOpenChange={(e) => setIsDialogOpen(e.open)}
+          placement="center"
+        >
+          <Button colorScheme="blue" leftIcon={<Icon as={Plus} boxSize={4} />} onClick={() => handleOpenDialog()}>
+            Tambah Pegawai
+          </Button>
+          
+          <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingId ? "Edit Data Penggajian" : "Tambah Pegawai"}</DialogTitle>
-              <DialogDescription>
-                Masukkan komponen gaji pegawai. Gaji bersih dihitung otomatis.
-              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="nama_pegawai" className="text-right">Nama</Label>
-                  <Input 
-                    id="nama_pegawai" 
-                    value={formData.nama_pegawai}
-                    onChange={(e) => setFormData({...formData, nama_pegawai: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="jabatan" className="text-right">Posisi</Label>
-                  <Input 
-                    id="jabatan" 
-                    placeholder="Contoh: Satpam"
-                    value={formData.jabatan}
-                    onChange={(e) => setFormData({...formData, jabatan: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4 mt-2">
-                  <Label htmlFor="gaji_pokok" className="text-right">Gaji Pokok</Label>
-                  <Input 
-                    id="gaji_pokok" 
-                    type="number"
-                    value={formData.gaji_pokok || ""}
-                    onChange={(e) => setFormData({...formData, gaji_pokok: parseInt(e.target.value) || 0})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="tunjangan" className="text-right">Tunjangan</Label>
-                  <Input 
-                    id="tunjangan" 
-                    type="number"
-                    value={formData.tunjangan || ""}
-                    onChange={(e) => setFormData({...formData, tunjangan: parseInt(e.target.value) || 0})}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="potongan" className="text-right">Potongan</Label>
-                  <Input 
-                    id="potongan" 
-                    type="number"
-                    value={formData.potongan || ""}
-                    onChange={(e) => setFormData({...formData, potongan: parseInt(e.target.value) || 0})}
-                    className="col-span-3"
-                  />
-                </div>
-              </div>
+              <DialogBody pb={6}>
+                <Stack spacing={4}>
+                  <Field label="Nama Pegawai" required>
+                    <Input 
+                      value={formData.nama_pegawai}
+                      onChange={(e) => setFormData({...formData, nama_pegawai: e.target.value})}
+                      placeholder="Masukkan nama lengkap"
+                    />
+                  </Field>
+                  
+                  <Field label="Posisi / Jabatan" required>
+                    <Input 
+                      placeholder="Contoh: Satpam"
+                      value={formData.jabatan}
+                      onChange={(e) => setFormData({...formData, jabatan: e.target.value})}
+                    />
+                  </Field>
+                  
+                  <Field label="Gaji Pokok" required>
+                    <Input 
+                      type="number"
+                      value={formData.gaji_pokok || ""}
+                      onChange={(e) => setFormData({...formData, gaji_pokok: e.target.value})}
+                      placeholder="0"
+                    />
+                  </Field>
+                  
+                  <HStack spacing={4}>
+                    <Field label="Tunjangan">
+                      <Input 
+                        type="number"
+                        value={formData.tunjangan || ""}
+                        onChange={(e) => setFormData({...formData, tunjangan: e.target.value})}
+                        placeholder="0"
+                      />
+                    </Field>
+                    <Field label="Potongan">
+                      <Input 
+                        type="number"
+                        value={formData.potongan || ""}
+                        onChange={(e) => setFormData({...formData, potongan: e.target.value})}
+                        placeholder="0"
+                      />
+                    </Field>
+                  </HStack>
+                </Stack>
+              </DialogBody>
+              
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-                <Button type="submit">Simpan Data</Button>
+                <DialogActionTrigger asChild>
+                  <Button variant="ghost">Batal</Button>
+                </DialogActionTrigger>
+                <Button type="submit" colorScheme="blue">Simpan Data</Button>
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+        </DialogRoot>
+      </Flex>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Total Beban Gaji Bulan Ini</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl font-bold text-red-600">
+      <Box p={6} bg="white" borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100" borderLeft="4px solid" borderLeftColor="red.500">
+        <VStack align="start" spacing={1}>
+          <Text fontSize="sm" fontWeight="medium" color="gray.600">Total Beban Gaji Bulan Ini</Text>
+          <Text fontSize="3xl" fontWeight="bold" color="red.600">
             Rp {totalGajiBulanIni.toLocaleString('id-ID')}
-          </div>
-        </CardContent>
-      </Card>
+          </Text>
+        </VStack>
+      </Box>
 
-      <div className="rounded-md border bg-white overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-neutral-50/50">
-              <TableHead>Nama Pegawai</TableHead>
-              <TableHead>Jabatan</TableHead>
-              <TableHead className="text-right">Gaji Pokok</TableHead>
-              <TableHead className="text-right">Tunjangan</TableHead>
-              <TableHead className="text-right">Potongan</TableHead>
-              <TableHead className="text-right font-bold text-neutral-900">Gaji Bersih</TableHead>
-              <TableHead className="text-right">Aksi</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-neutral-500">
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Memuat data...
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center text-neutral-500">
-                  Tidak ada data pegawai.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="font-medium text-neutral-900">{item.nama_pegawai}</TableCell>
-                  <TableCell>{item.jabatan}</TableCell>
-                  <TableCell className="text-right text-neutral-500">Rp {item.gaji_pokok.toLocaleString('id-ID')}</TableCell>
-                  <TableCell className="text-right text-neutral-500">Rp {item.tunjangan.toLocaleString('id-ID')}</TableCell>
-                  <TableCell className="text-right text-red-500">Rp {item.potongan.toLocaleString('id-ID')}</TableCell>
-                  <TableCell className="text-right font-bold text-neutral-900 border-l">
-                    Rp {item.gaji_bersih.toLocaleString('id-ID')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(item)}>
-                        <Edit className="h-4 w-4 text-blue-600" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                        <span className="sr-only">Hapus</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
+        <Box overflowX="auto">
+          <Table.Root variant="simple">
+            <Table.Header bg="gray.50">
+              <Table.Row>
+                <Table.ColumnHeader>Nama Pegawai</Table.ColumnHeader>
+                <Table.ColumnHeader>Jabatan</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Gaji Pokok</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Tunjangan</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right" color="red.600">Potongan</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right" fontWeight="bold" bg="gray.50">Gaji Bersih</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Aksi</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {loading ? (
+                <Table.Row>
+                  <Table.Cell colSpan={7} py={10}>
+                    <Center>
+                      <HStack spacing={3} color="gray.500">
+                        <Spinner size="sm" />
+                        <Text>Memuat data...</Text>
+                      </HStack>
+                    </Center>
+                  </Table.Cell>
+                </Table.Row>
+              ) : data.length === 0 ? (
+                <Table.Row>
+                  <Table.Cell colSpan={7} textAlign="center" py={10} color="gray.500">
+                    Tidak ada data pegawai.
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                data.map((item) => (
+                  <Table.Row key={item.id}>
+                    <Table.Cell fontWeight="semibold" color="gray.900">{item.nama_pegawai}</Table.Cell>
+                    <Table.Cell color="gray.600">{item.jabatan}</Table.Cell>
+                    <Table.Cell textAlign="right">Rp {item.gaji_pokok.toLocaleString('id-ID')}</Table.Cell>
+                    <Table.Cell textAlign="right">Rp {item.tunjangan.toLocaleString('id-ID')}</Table.Cell>
+                    <Table.Cell textAlign="right" color="red.500">Rp {item.potongan.toLocaleString('id-ID')}</Table.Cell>
+                    <Table.Cell textAlign="right" fontWeight="bold" color="gray.900" bg="gray.50/30">
+                      Rp {item.gaji_bersih.toLocaleString('id-ID')}
+                    </Table.Cell>
+                    <Table.Cell textAlign="right">
+                      <HStack justify="end" spacing={2}>
+                        <Button variant="ghost" size="sm" p={1} onClick={() => handleOpenDialog(item)}>
+                          <Icon as={Edit} boxSize={4} color="blue.600" />
+                        </Button>
+                        <Button variant="ghost" size="sm" p={1} onClick={() => handleDelete(item.id)}>
+                          <Icon as={Trash2} boxSize={4} color="red.600" />
+                        </Button>
+                      </HStack>
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Box>
+      </Box>
+    </VStack>
   );
 }

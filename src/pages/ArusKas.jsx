@@ -1,41 +1,79 @@
-import { useState, useEffect, useMemo } from "react";
-import { Plus, ArrowUpRight, ArrowDownRight, WalletCards, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Plus, ArrowUpRight, ArrowDownRight, WalletCards } from "lucide-react";
 import {
+  Box,
+  Flex,
+  Heading,
+  Text,
+  Button,
+  VStack,
+  HStack,
+  Input,
+  SimpleGrid,
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Badge,
+  Icon,
+  Spinner,
+  Center,
+  Stack,
+} from "@chakra-ui/react";
 import {
-  Dialog,
+  DialogRoot,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
+  DialogBody,
+  DialogFooter,
+  DialogActionTrigger,
+} from "@/components/ui/chakra/dialog";
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/chakra/select";
+import { Field } from "@/components/ui/chakra/field";
+import { toaster } from "@/components/ui/chakra/toaster";
 import { supabase } from "@/lib/supabase";
+
+const StatCard = ({ label, value, icon, color, loading }) => (
+  <Box 
+    borderLeft="4px solid" 
+    borderLeftColor={`${color}.500`} 
+    bg="white" 
+    p={5} 
+    borderRadius="xl" 
+    shadow="sm"
+    border="1px solid"
+    borderColor="gray.100"
+  >
+    <Flex justify="space-between" align="center" mb={2}>
+      <Text fontWeight="medium" color="gray.600" fontSize="sm">{label}</Text>
+      <Icon as={icon} color={`${color}.600`} boxSize={5} />
+    </Flex>
+    <Box>
+      {loading ? (
+        <Spinner size="sm" color="gray.300" />
+      ) : (
+        <Text fontSize="2xl" fontStyle="normal" fontWeight="bold" color={color === 'blue' ? 'gray.900' : `${color}.600`}>
+          {value}
+        </Text>
+      )}
+    </Box>
+  </Box>
+);
 
 export default function ArusKas() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
   const [formData, setFormData] = useState({
     tanggal: new Date().toISOString().split('T')[0],
     keterangan: "",
-    kategori: "Pemasukan",
+    tipe: "Masuk",
     jumlah: 0,
+    kategori: "Iuran"
   });
 
   useEffect(() => {
@@ -45,15 +83,19 @@ export default function ArusKas() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const { data: transactions, error } = await supabase
+      const { data: kas, error } = await supabase
         .from('arus_kas')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
       
       if (error) throw error;
-      setData(transactions || []);
+      setData(kas || []);
     } catch {
-      toast.error("Gagal mengambil data arus kas");
+      toaster.create({
+        title: "Gagal mengambil data arus kas",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -63,8 +105,9 @@ export default function ArusKas() {
     setFormData({
       tanggal: new Date().toISOString().split('T')[0],
       keterangan: "",
-      kategori: "Pemasukan",
+      tipe: "Masuk",
       jumlah: 0,
+      kategori: "Iuran"
     });
     setIsDialogOpen(true);
   };
@@ -72,208 +115,228 @@ export default function ArusKas() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Get current balance (top row since it's ordered by descending created_at)
-      const lastSaldo = data.length > 0 ? data[0].saldo_after : 0;
-      const newSaldo = formData.kategori === "Pemasukan" 
-        ? lastSaldo + formData.jumlah 
-        : lastSaldo - formData.jumlah;
+      const { data: lastRecord } = await supabase
+        .from('arus_kas')
+        .select('saldo_after')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      const lastBalance = lastRecord?.[0]?.saldo_after || 0;
+      const newBalance = formData.tipe === "Masuk" 
+        ? lastBalance + formData.jumlah 
+        : lastBalance - formData.jumlah;
 
       const { error } = await supabase
         .from('arus_kas')
-        .insert([{ 
-          ...formData, 
-          saldo_after: newSaldo 
+        .insert([{
+          ...formData,
+          saldo_before: lastBalance,
+          saldo_after: newBalance
         }]);
-      
+
       if (error) throw error;
       
-      toast.success("Catatan kas berhasil ditambahkan");
+      toaster.create({
+        title: "Berhasil",
+        description: "Catatan arus kas berhasil disimpan",
+        type: "success",
+      });
       setIsDialogOpen(false);
       fetchData();
     } catch (error) {
-      toast.error("Kesalahan: " + error.message);
+      toaster.create({
+        title: "Gagal menyimpan data",
+        description: error.message,
+        type: "error",
+      });
     }
   };
 
-  const summary = useMemo(() => {
-    const sum = data.reduce((acc, curr) => {
-      if (curr.kategori === "Pemasukan") acc.pemasukan += Number(curr.jumlah);
-      if (curr.kategori === "Pengeluaran") acc.pengeluaran += Number(curr.jumlah);
-      return acc;
-    }, { pemasukan: 0, pengeluaran: 0 });
-    
-    sum.saldo = data.length > 0 ? data[0].saldo_after : 0;
-    return sum;
-  }, [data]);
+  const currentBalance = data[0]?.saldo_after || 0;
+  const totalMasuk = data.filter(i => i.tipe === "Masuk").reduce((a, b) => a + b.jumlah, 0);
+  const totalKeluar = data.filter(i => i.tipe === "Keluar").reduce((a, b) => a + b.jumlah, 0);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-neutral-900">Arus Kas</h1>
-          <p className="text-neutral-500">Pencatatan pemasukan dan pengeluaran keuangan paguyuban.</p>
-        </div>
+    <VStack spacing={6} align="stretch" width="full">
+      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
+        <Box>
+          <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Arus Kas</Heading>
+          <Text color="gray.500">Pantau seluruh pemasukan dan pengeluaran paguyuban.</Text>
+        </Box>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={handleOpenDialog}>
-              <Plus className="h-4 w-4" />
-              Catat Transaksi
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+        <DialogRoot 
+          open={isDialogOpen} 
+          onOpenChange={(e) => setIsDialogOpen(e.open)}
+          placement="center"
+        >
+          <Button colorScheme="blue" leftIcon={<Icon as={Plus} boxSize={4} />} onClick={handleOpenDialog}>
+            Tambah Catatan
+          </Button>
+          
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>Catat Transaksi Kas</DialogTitle>
-              <DialogDescription>
-                Masukkan detail transaksi (pemasukan atau pengeluaran).
-              </DialogDescription>
+              <DialogTitle>Catat Arus Kas</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="tanggal" className="text-right">Tanggal</Label>
-                  <Input 
-                    id="tanggal" 
-                    type="date"
-                    value={formData.tanggal}
-                    onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="kategori" className="text-right">Kategori</Label>
-                  <div className="col-span-3">
-                    <Select value={formData.kategori} onValueChange={(val) => setFormData({...formData, kategori: val})}>
+              <DialogBody pb={6}>
+                <Stack spacing={4}>
+                  <HStack spacing={4}>
+                    <Field label="Tipe" required>
+                      <SelectRoot 
+                        value={[formData.tipe]} 
+                        onValueChange={(e) => setFormData({...formData, tipe: e.value[0]})}
+                      >
+                        <SelectTrigger>
+                          <SelectValueText />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem item="Masuk" key="Masuk">Pemasukan</SelectItem>
+                          <SelectItem item="Keluar" key="Keluar">Pengeluaran</SelectItem>
+                        </SelectContent>
+                      </SelectRoot>
+                    </Field>
+                    <Field label="Tanggal" required>
+                      <Input 
+                        type="date"
+                        value={formData.tanggal}
+                        onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
+                      />
+                    </Field>
+                  </HStack>
+
+                  <Field label="Kategori" required>
+                    <SelectRoot 
+                      value={[formData.kategori]} 
+                      onValueChange={(e) => setFormData({...formData, kategori: e.value[0]})}
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih kategori" />
+                        <SelectValueText />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Pemasukan">Pemasukan</SelectItem>
-                        <SelectItem value="Pengeluaran">Pengeluaran</SelectItem>
+                        <SelectItem item="Iuran" key="Iuran">Iuran Warga</SelectItem>
+                        <SelectItem item="Donasi" key="Donasi">Donasi</SelectItem>
+                        <SelectItem item="Kebersihan" key="Kebersihan">Kebersihan</SelectItem>
+                        <SelectItem item="Keamanan" key="Keamanan">Keamanan</SelectItem>
+                        <SelectItem item="Perbaikan" key="Perbaikan">Perbaikan Umum</SelectItem>
+                        <SelectItem item="Lainnya" key="Lainnya">Lain-lain</SelectItem>
                       </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="keterangan" className="text-right">Keterangan</Label>
-                  <Input 
-                    id="keterangan" 
-                    value={formData.keterangan}
-                    onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="jumlah" className="text-right">Jumlah (Rp)</Label>
-                  <Input 
-                    id="jumlah" 
-                    type="number"
-                    value={formData.jumlah || ""}
-                    onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-              </div>
+                    </SelectRoot>
+                  </Field>
+
+                  <Field label="Jumlah (Rp)" required>
+                    <Input 
+                      type="number"
+                      value={formData.jumlah || ""}
+                      onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
+                    />
+                  </Field>
+
+                  <Field label="Keterangan" required>
+                    <Input 
+                      placeholder="Contoh: Pembayaran Gaji Security Jan"
+                      value={formData.keterangan}
+                      onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
+                    />
+                  </Field>
+                </Stack>
+              </DialogBody>
+              
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-                <Button type="submit">Simpan Transaksi</Button>
+                <DialogActionTrigger asChild>
+                  <Button variant="ghost">Batal</Button>
+                </DialogActionTrigger>
+                <Button type="submit" colorScheme="blue">Simpan Catatan</Button>
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
-      </div>
+        </DialogRoot>
+      </Flex>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              Rp {summary.pemasukan.toLocaleString('id-ID')}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
-            <ArrowDownRight className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              Rp {summary.pengeluaran.toLocaleString('id-ID')}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Kas Saat Ini</CardTitle>
-            <WalletCards className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-neutral-900">
-              Rp {summary.saldo.toLocaleString('id-ID')}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+        <StatCard
+          label="Total Saldo (Saat Ini)"
+          value={`Rp ${currentBalance.toLocaleString('id-ID')}`}
+          icon={WalletCards}
+          color="blue"
+          loading={loading}
+        />
+        <StatCard
+          label="Total Pemasukan"
+          value={`Rp ${totalMasuk.toLocaleString('id-ID')}`}
+          icon={ArrowUpRight}
+          color="green"
+          loading={loading}
+        />
+        <StatCard
+          label="Total Pengeluaran"
+          value={`Rp ${totalKeluar.toLocaleString('id-ID')}`}
+          icon={ArrowDownRight}
+          color="red"
+          loading={loading}
+        />
+      </SimpleGrid>
 
-      <div className="rounded-md border bg-white overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-neutral-50/50">
-              <TableHead>Tanggal</TableHead>
-              <TableHead>Keterangan</TableHead>
-              <TableHead>Kategori</TableHead>
-              <TableHead className="text-right">Jumlah</TableHead>
-              <TableHead className="text-right">Sisa Saldo</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  <div className="flex items-center justify-center gap-2 text-neutral-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Memuat data kas...
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-neutral-500">
-                  Belum ada catatan transaksi kas.
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell className="w-[120px]">{item.tanggal}</TableCell>
-                  <TableCell className="font-medium text-neutral-900">{item.keterangan}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={
-                      item.kategori === "Pemasukan" ? "bg-green-50 text-green-700 border-green-200" : 
-                      "bg-red-50 text-red-700 border-red-200"
-                    }>
-                      {item.kategori}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className={`text-right font-medium ${item.kategori === "Pemasukan" ? "text-green-600" : "text-red-600"}`}>
-                    {item.kategori === "Pemasukan" ? "+" : "-"} Rp {Number(item.jumlah).toLocaleString('id-ID')}
-                  </TableCell>
-                  <TableCell className="text-right font-bold text-neutral-900">
-                    Rp {Number(item.saldo_after).toLocaleString('id-ID')}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
+        <Box overflowX="auto">
+          <Table.Root variant="simple">
+            <Table.Header bg="gray.50">
+              <Table.Row>
+                <Table.ColumnHeader>Tanggal</Table.ColumnHeader>
+                <Table.ColumnHeader>Keterangan</Table.ColumnHeader>
+                <Table.ColumnHeader>Kategori</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Jumlah</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">Saldo Akhir</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {loading ? (
+                <Table.Row>
+                  <Table.Cell colSpan={5} py={10}>
+                    <Center>
+                      <HStack spacing={3} color="gray.500">
+                        <Spinner size="sm" />
+                        <Text>Memuat data kas...</Text>
+                      </HStack>
+                    </Center>
+                  </Table.Cell>
+                </Table.Row>
+              ) : data.length === 0 ? (
+                <Table.Row>
+                  <Table.Cell colSpan={5} textAlign="center" py={10} color="gray.500">
+                    Belum ada catatan arus kas.
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                data.map((item) => (
+                  <Table.Row key={item.id} _hover={{ bg: "gray.50/50" }}>
+                    <Table.Cell fontSize="sm">
+                      {new Date(item.tanggal).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Text fontWeight="medium" fontSize="sm">{item.keterangan}</Text>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Badge 
+                        variant="outline" 
+                        size="sm"
+                        colorScheme={item.tipe === "Masuk" ? "green" : "red"}
+                      >
+                        {item.kategori}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell textAlign="right" color={item.tipe === "Masuk" ? "green.600" : "red.600"} fontWeight="bold">
+                      {item.tipe === "Masuk" ? "+" : "-"} Rp {item.jumlah.toLocaleString('id-ID')}
+                    </Table.Cell>
+                    <Table.Cell textAlign="right" fontWeight="bold" color="gray.900" bg="gray.50/30">
+                      Rp {item.saldo_after.toLocaleString('id-ID')}
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table.Root>
+        </Box>
+      </Box>
+    </VStack>
   );
 }
