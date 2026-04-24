@@ -15,6 +15,7 @@ const Penggajian = lazy(() => import('@/pages/Penggajian'));
 const ForumWarga = lazy(() => import('@/pages/ForumWarga'));
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
+const Profile = lazy(() => import('@/pages/Profile'));
 
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -111,6 +112,7 @@ function App() {
           <Route path="/kas" element={<PrivateRoute><AppLayout><ArusKas /></AppLayout></PrivateRoute>} />
           <Route path="/penggajian" element={<PrivateRoute><AppLayout><Penggajian /></AppLayout></PrivateRoute>} />
           <Route path="/forum" element={<PrivateRoute><AppLayout><ForumWarga /></AppLayout></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><AppLayout><Profile /></AppLayout></PrivateRoute>} />
 
           {/* 404 fallback */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

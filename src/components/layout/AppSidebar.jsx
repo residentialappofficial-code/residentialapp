@@ -22,7 +22,8 @@ import {
   Banknote, 
   MessageSquare,
   ChevronRight,
-  Building2
+  Building2,
+  User
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -67,6 +68,12 @@ const allItems = [
     title: "Forum Warga",
     url: "/forum",
     icon: MessageSquare,
+    roles: ["super_admin", "admin", "resident"],
+  },
+  {
+    title: "Profil Saya",
+    url: "/profile",
+    icon: User,
     roles: ["super_admin", "admin", "resident"],
   },
 ];
@@ -124,78 +131,99 @@ export function AppSidebar({ role = "resident" }) {
   
   const getIsActive = (url) => location.pathname === url || location.pathname.startsWith(`${url}/`);
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toaster.create({
+        title: "Berhasil Keluar",
+        description: "Sampai jumpa kembali!",
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   return (
-    <Flex height="100vh" position="sticky" top="0" zIndex="20">
-      {/* Tier 1: Narrow Icon Bar */}
-      <VStack
-        width={NAV_WIDTHS.icon}
-        height="100%"
-        bg="white"
-        borderRight="1px solid"
-        borderColor="gray.100"
-        py={8}
-        spacing={10}
-        align="center"
-      >
-        <Flex
-          h={12} w={12} borderRadius="16px" bg="emerald.500" color="white" align="center" justify="center"
-          boxShadow="0 4px 12px rgba(16, 185, 129, 0.3)"
+    <Flex 
+      height="100vh" 
+      width="260px" 
+      bg="white" 
+      borderRight="1px solid" 
+      borderColor="gray.100"
+      direction="column"
+      py={8}
+      px={4}
+      position="sticky"
+      top="0"
+      zIndex="20"
+    >
+      {/* Branding */}
+      <Box px={2} mb={10}>
+        <HStack spacing={3}>
+          <Flex 
+            h={10} w={10} borderRadius="12px" bg="emerald.500" color="white" align="center" justify="center"
+            boxShadow="0 4px 12px rgba(16, 185, 129, 0.2)"
+          >
+            <Icon as={Building2} boxSize={5} />
+          </Flex>
+          <VStack align="start" spacing={0}>
+            <Text fontSize="xl" fontWeight="900" color="gray.900" letterSpacing="-0.02em" lineHeight="1.1">Flup</Text>
+            <Text fontSize="9px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.05em">
+              Residential Management
+            </Text>
+          </VStack>
+        </HStack>
+      </Box>
+
+      {/* Menu Items */}
+      <VStack align="stretch" spacing={1} flex="1">
+        <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.1em" px={2} mb={2}>
+          Main Menu
+        </Text>
+        {allItems.map((item) => (
+          <NavItem key={item.title} item={item} isActive={getIsActive(item.url)} />
+        ))}
+      </VStack>
+
+      {/* Profile & Logout */}
+      <Box mt="auto" pt={4} borderTop="1px solid" borderColor="gray.100">
+        <HStack p={2} spacing={3} mb={2}>
+          <Avatar 
+            size="sm" 
+            name={profile?.nama || "User"} 
+            src={profile?.avatar_url}
+            border="2px solid" 
+            borderColor="emerald.50"
+          />
+          <VStack align="start" spacing={0} flex="1" minW="0">
+            <Text fontSize="xs" fontWeight="800" color="gray.900" noOfLines={1}>
+              {profile?.nama || "User"}
+            </Text>
+            <Text fontSize="10px" color="gray.500" textTransform="capitalize">
+              {profile?.role?.replace('_', ' ') || "Resident"}
+            </Text>
+          </VStack>
+        </HStack>
+        
+        <Button
+          variant="ghost" 
+          width="full"
+          justifyContent="start"
+          height="40px"
+          color="gray.500"
+          _hover={{ color: "red.600", bg: "red.50" }}
+          onClick={handleLogout}
+          borderRadius="10px"
+          fontSize="sm"
+          fontWeight="700"
         >
-          <Icon as={Building2} boxSize={6} />
-        </Flex>
-
-        <VStack spacing={6} width="full">
-          {allItems.slice(0, 3).map((item) => (
-            <NavItem key={item.title} item={item} isActive={getIsActive(item.url)} variant="icon" />
-          ))}
-        </VStack>
-
-        <Spacer />
-
-        <Avatar
-          size="sm" name={profile?.nama || "User"} src={profile?.avatar_url}
-          border="2px solid" borderColor="emerald.100"
-        />
-
-        <IconButton
-          variant="ghost" aria-label="Logout" color="gray.400"
-          _hover={{ color: "red.500", bg: "red.50" }}
-          onClick={signOut}
-          icon={<Icon as={LogOut} boxSize={5} />}
-        />
-      </VStack>
-
-      {/* Tier 2: Wide Menu Label Bar */}
-      <VStack
-        width={NAV_WIDTHS.label}
-        height="100%"
-        bg="gray.50"
-        borderRight="1px solid"
-        borderColor="gray.100"
-        align="stretch"
-        py={8}
-        px={4}
-        spacing={8}
-      >
-        <Box px={2}>
-          <HStack spacing={2}>
-            <Text fontSize="xl" fontWeight="900" color="gray.900" letterSpacing="-0.02em">Flup</Text>
-            <Box h={1.5} w={1.5} borderRadius="full" bg="emerald.500" mt={1} />
+          <HStack spacing={3}>
+            <Icon as={LogOut} boxSize={4} />
+            <Text>Keluar</Text>
           </HStack>
-          <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.1em" mt={1}>
-            Residential Management
-          </Text>
-        </Box>
-
-        <VStack align="stretch" spacing={1}>
-          <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.1em" px={2} mb={2}>
-            Main Menu
-          </Text>
-          {allItems.map((item) => (
-            <NavItem key={item.title} item={item} isActive={getIsActive(item.url)} />
-          ))}
-        </VStack>
-      </VStack>
+        </Button>
+      </Box>
     </Flex>
   );
 }

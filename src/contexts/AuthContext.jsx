@@ -106,6 +106,24 @@ export const AuthProvider = ({ children }) => {
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     signUp: (email, password, metadata) => supabase.auth.signUp({ email, password, options: { data: metadata } }),
     signOut: () => supabase.auth.signOut(),
+    updateProfile: async (newData) => {
+      if (!user) return { error: "No user logged in" };
+      const { error } = await supabase
+        .from('warga')
+        .update(newData)
+        .eq('user_id', user.id);
+      
+      if (!error) {
+        // Refresh profil lokal agar UI langsung berubah
+        const { data } = await supabase
+          .from('warga')
+          .select('*, perumahan(nama)')
+          .eq('user_id', user.id)
+          .single();
+        setProfile(data);
+      }
+      return { error };
+    },
   };
 
   return (
