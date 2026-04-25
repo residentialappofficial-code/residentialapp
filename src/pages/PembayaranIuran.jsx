@@ -40,7 +40,7 @@ import { toaster } from "@/components/ui/chakra/toaster";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function PembayaranIuran() {
-  const { profile } = useAuth();
+  const { profile, selectedPerumahanId } = useAuth();
   const [data, setData] = useState([]);
   const [wargaList, setWargaList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,19 +64,24 @@ export default function PembayaranIuran() {
   ];
 
   useEffect(() => {
-    fetchData();
-    fetchWarga();
-  }, [filterMonth, filterYear]);
+    if (selectedPerumahanId) {
+      fetchData();
+      fetchWarga();
+    }
+  }, [filterMonth, filterYear, selectedPerumahanId]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      if (!selectedPerumahanId) return;
+
       const { data: payments, error } = await supabase
         .from('pembayaran_iuran')
         .select(`
           *,
-          warga:warga_id(nama, blok)
+          warga!inner(nama, blok, perumahan_id)
         `)
+        .eq('warga.perumahan_id', selectedPerumahanId)
         .eq('bulan', filterMonth)
         .eq('tahun', filterYear)
         .order('created_at', { ascending: false });
@@ -96,11 +101,12 @@ export default function PembayaranIuran() {
 
   const fetchWarga = async () => {
     try {
-      let query = supabase.from('warga').select('id, nama, blok');
-      if (profile?.role !== 'super_admin') {
-        query = query.eq('perumahan_id', profile?.perumahan_id);
-      }
-      const { data: residents, error } = await query;
+      if (!selectedPerumahanId) return;
+      
+      const { data: residents, error } = await supabase
+        .from('warga')
+        .select('id, nama, blok')
+        .eq('perumahan_id', selectedPerumahanId);
       if (error) throw error;
       setWargaList(residents || []);
     } catch {

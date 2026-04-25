@@ -36,8 +36,10 @@ import {
 import { Field } from "@/components/ui/chakra/field";
 import { toaster } from "@/components/ui/chakra/toaster";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function DataWarga() {
+  const { profile, selectedPerumahanId } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -57,16 +59,23 @@ export default function DataWarga() {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchData(searchTerm);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    if (selectedPerumahanId) {
+      const timer = setTimeout(() => {
+        fetchData(searchTerm);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [searchTerm, selectedPerumahanId]);
 
   const fetchData = async (search = "") => {
     try {
       setLoading(true);
-      let query = supabase.from('warga').select('*').order('created_at', { ascending: true });
+      if (!selectedPerumahanId) return;
+
+      let query = supabase.from('warga')
+        .select('*')
+        .eq('perumahan_id', selectedPerumahanId)
+        .order('created_at', { ascending: true });
       
       if (search) {
         query = query.or(`nama.ilike.%${search}%,blok.ilike.%${search}%`);
@@ -135,7 +144,7 @@ export default function DataWarga() {
       } else {
         const { error } = await supabase
           .from('warga')
-          .insert([formData]);
+          .insert([{ ...formData, perumahan_id: selectedPerumahanId }]);
         
         if (error) throw error;
         toaster.create({

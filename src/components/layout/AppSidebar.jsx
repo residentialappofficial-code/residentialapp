@@ -12,6 +12,13 @@ import {
 } from "@chakra-ui/react";
 import { Avatar } from "@/components/ui/chakra/avatar";
 import { Tooltip } from "@/components/ui/chakra/tooltip";
+import {
+  SelectRoot,
+  SelectTrigger,
+  SelectValueText,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/chakra/select";
 import { 
   LogOut, 
   LayoutDashboard, 
@@ -28,6 +35,12 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 
 const allItems = [
+  {
+    title: "Manajemen Komplek",
+    url: "/manage-complexes",
+    icon: Building2,
+    roles: ["super_admin"],
+  },
   {
     title: "Dashboard",
     url: "/dashboard",
@@ -127,9 +140,11 @@ const NavItem = ({ item, isActive, variant = "label" }) => {
 
 export function AppSidebar({ role = "resident" }) {
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, perumahanList, selectedPerumahanId, switchPerumahan } = useAuth();
   
   const getIsActive = (url) => location.pathname === url || location.pathname.startsWith(`${url}/`);
+
+  const activePerumahan = perumahanList.find(p => p.id === selectedPerumahanId);
 
   const handleLogout = async () => {
     try {
@@ -175,6 +190,31 @@ export function AppSidebar({ role = "resident" }) {
           </VStack>
         </HStack>
       </Box>
+
+      {/* Complex Switcher (Super Admin Only) */}
+      {profile?.role === 'super_admin' && perumahanList.length > 0 && (
+        <Box px={2} mb={6}>
+          <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.1em" mb={2}>
+            Pilih Komplek
+          </Text>
+          <SelectRoot 
+            size="sm"
+            value={[selectedPerumahanId]} 
+            onValueChange={(e) => switchPerumahan(e.value[0])}
+          >
+            <SelectTrigger bg="gray.50" border="none" borderRadius="10px">
+              <SelectValueText placeholder="Pilih Perumahan" fontWeight="700" fontSize="xs" color="gray.700" />
+            </SelectTrigger>
+            <SelectContent>
+              {perumahanList.map((p) => (
+                <SelectItem item={p.id} key={p.id}>
+                  <Text fontSize="xs" fontWeight="600">{p.nama}</Text>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </SelectRoot>
+        </Box>
+      )}
 
       {/* Menu Items */}
       <VStack align="stretch" spacing={1} flex="1">

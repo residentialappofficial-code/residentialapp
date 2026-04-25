@@ -307,22 +307,24 @@ const SidebarWidgets = ({ saldo, delay = 600 }) => (
 );
 
 export default function Dashboard() {
-  const { user, profile } = useAuth();
+  const { user, profile, selectedPerumahanId } = useAuth();
   const [stats, setStats] = useState({ totalWarga: 0, iuranBulanIni: 0, saldoKas: 0, totalPengurus: 0 });
   const [recentPayments, setRecentPayments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchDashboardData = useCallback(async () => {
+    if (!selectedPerumahanId) return;
+    
     try {
       setLoading(true);
       const isResident = profile?.role === 'resident';
       
       const [warga, pengurus, cmonth_iuran, last_kas, rpayments] = await Promise.all([
-        supabase.from('warga').select('*', { count: 'exact', head: true }),
-        supabase.from('pengurus').select('*', { count: 'exact', head: true }),
-        supabase.from('iuran').select('jumlah').eq('bulan', new Date().toLocaleString('id-ID', { month: 'long', year: 'numeric' })).eq('status', 'Lunas').match(isResident ? { warga_id: profile.id } : {}),
-        supabase.from('arus_kas').select('saldo_after').order('created_at', { ascending: false }).limit(1),
-        supabase.from('iuran').select('id, jumlah, tanggal_bayar, status, warga (nama, blok)').order('created_at', { ascending: false }).limit(5).match(isResident ? { warga_id: profile.id } : {})
+        supabase.from('warga').select('*', { count: 'exact', head: true }).eq('perumahan_id', selectedPerumahanId),
+        supabase.from('pengurus').select('*', { count: 'exact', head: true }).eq('perumahan_id', selectedPerumahanId),
+        supabase.from('pembayaran_iuran').select('jumlah, warga!inner(perumahan_id)').eq('warga.perumahan_id', selectedPerumahanId).eq('status', 'Lunas'),
+        supabase.from('arus_kas').select('saldo_after').eq('perumahan_id', selectedPerumahanId).order('created_at', { ascending: false }).limit(1),
+        supabase.from('pembayaran_iuran').select('id, jumlah, tanggal_bayar, status, warga!inner(nama, blok, perumahan_id)').eq('warga.perumahan_id', selectedPerumahanId).order('created_at', { ascending: false }).limit(5)
       ]);
 
       setStats({
@@ -337,11 +339,11 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  }, [profile]);
+  }, [profile, selectedPerumahanId]);
 
   useEffect(() => {
-    if (user) fetchDashboardData();
-  }, [user, profile, fetchDashboardData]);
+    if (user && selectedPerumahanId) fetchDashboardData();
+  }, [user, profile, selectedPerumahanId, fetchDashboardData]);
 
   return (
     <VStack spacing={8} align="stretch" width="full" py={6}>
