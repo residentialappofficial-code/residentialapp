@@ -71,27 +71,29 @@ export default function Profile() {
 
       setUploading(true);
       const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}-${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `avatars/${profile.id}-${Math.random()}.${fileExt}`;
 
-      // 1. Upload ke Storage
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
+      // 1. Upload ke R2 via API kita
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('fileName', fileName);
 
-      if (uploadError) throw uploadError;
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
 
-      // 2. Dapatkan Public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+      const result = await response.json();
 
-      // 3. Update Database
-      const { error: updateError } = await updateProfile({ avatar_url: publicUrl });
+      if (!response.ok) throw new Error(result.error || 'Gagal mengunggah ke R2');
+
+      // 2. Update Database Supabase dengan URL dari R2
+      const { error: updateError } = await updateProfile({ avatar_url: result.url });
       if (updateError) throw updateError;
 
       toaster.create({
         title: "Foto Berhasil Diubah",
+        description: "Tersimpan di Cloudflare R2",
         type: "success",
       });
     } catch (error) {
