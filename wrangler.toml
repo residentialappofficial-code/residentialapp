@@ -1,0 +1,8 @@
+name = "residentialapp"
+compatibility_date = "2024-11-01"
+pages_build_output_dir = "dist"
+
+[vars]
+# Add your environment variables here
+# SUPABASE_URL = "your-supabase-url"
+# SUPABASE_ANON_KEY = "your-supabase-anon-key"

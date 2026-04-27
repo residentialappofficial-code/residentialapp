@@ -60,7 +60,7 @@ export function AppSidebar() {
         <div className="bg-indigo-600 p-2 rounded-lg">
           <ShieldCheck className="w-6 h-6 text-white" />
         </div>
-        <span className="font-bold text-xl tracking-tight">FineHome</span>
+        <span className="font-bold text-xl tracking-tight">Habitix</span>
       </div>
 
       {/* Sidebar Content */}

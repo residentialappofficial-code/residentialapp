@@ -37,7 +37,7 @@ export default function Login() {
             <div className="bg-indigo-600 p-2 rounded-lg">
               <ShieldCheck className="w-8 h-8 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">FineHome</span>
+            <span className="text-2xl font-bold tracking-tight">Habitix</span>
           </div>
           
           <div className="max-w-md">
@@ -51,7 +51,7 @@ export default function Login() {
         </div>
 
         <div className="relative z-10 flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
-          <span>© 2026 FineHome Tech.</span>
+          <span>© 2026 Habitix Tech.</span>
           <div className="flex gap-4">
             <a href="#" className="hover:text-white transition-all">Terms</a>
             <a href="#" className="hover:text-white transition-all">Privacy</a>

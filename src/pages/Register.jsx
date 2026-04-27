@@ -73,7 +73,7 @@ export default function Register() {
             <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-500/20">
               <ShieldCheck className="w-8 h-8 text-white" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">FineHome</span>
+            <span className="text-2xl font-bold tracking-tight">Habitix</span>
           </div>
           
           <div className="max-w-md">
@@ -86,14 +86,14 @@ export default function Register() {
               <span className="text-indigo-400 font-black">to digital management.</span>
             </h1>
             <p className="text-lg text-slate-400 font-medium leading-relaxed">
-              Join thousands of complex managers who have digitalized their residential management with FineHome.
+              Join thousands of complex managers who have digitalized their residential management with Habitix.
             </p>
           </div>
         </div>
 
         <div className="relative z-10 flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          <span>© 2026 FineHome Tech.</span>
-          <span>SimPerumahan v1.0</span>
+          <span>© 2026 Habitix Tech.</span>
+          <span>Habitix v1.0</span>
         </div>
       </div>
 
@@ -103,7 +103,7 @@ export default function Register() {
           <div className="mb-10 text-center lg:text-left">
             <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
               <ShieldCheck className="w-8 h-8 text-indigo-600" />
-              <span className="text-xl font-bold">FineHome</span>
+              <span className="text-xl font-bold">Habitix</span>
             </div>
             <h2 className="text-3xl font-bold text-slate-900 mb-2">Daftarkan Komplek</h2>
             <p className="text-slate-500 font-medium">Lengkapi data untuk membuat dashboard manajemen Anda.</p>
