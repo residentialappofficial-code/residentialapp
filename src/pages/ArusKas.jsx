@@ -1,342 +1,174 @@
-import { useState, useEffect } from "react";
-import { Plus, ArrowUpRight, ArrowDownRight, WalletCards } from "lucide-react";
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  Button,
-  VStack,
-  HStack,
-  Input,
-  SimpleGrid,
-  Table,
-  Badge,
-  Icon,
-  Spinner,
-  Center,
-  Stack,
-} from "@chakra-ui/react";
-import {
-  DialogRoot,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-  DialogActionTrigger,
-} from "@/components/ui/chakra/dialog";
-import {
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/chakra/select";
-import { Field } from "@/components/ui/chakra/field";
-import { toaster } from "@/components/ui/chakra/toaster";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, TrendingUp, TrendingDown, WalletCards, Search, MoreVertical, Filter, FileText } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
-const StatCard = ({ label, value, icon, color, loading }) => (
-  <Box 
-    borderLeft="4px solid" 
-    borderLeftColor={`${color}.500`} 
-    bg="white" 
-    p={5} 
-    borderRadius="xl" 
-    shadow="sm"
-    border="1px solid"
-    borderColor="gray.100"
-  >
-    <Flex justify="space-between" align="center" mb={2}>
-      <Text fontWeight="medium" color="gray.600" fontSize="sm">{label}</Text>
-      <Icon as={icon} color={`${color}.600`} boxSize={5} />
-    </Flex>
-    <Box>
-      {loading ? (
-        <Spinner size="sm" color="gray.300" />
-      ) : (
-        <Text fontSize="2xl" fontStyle="normal" fontWeight="bold" color={color === 'blue' ? 'gray.900' : `${color}.600`}>
-          {value}
-        </Text>
-      )}
-    </Box>
-  </Box>
-);
+import { SelectionRequired } from "@/components/ui/SelectionRequired";
 
 export default function ArusKas() {
+  const { selectedPerumahanId, profile } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    tanggal: new Date().toISOString().split('T')[0],
-    keterangan: "",
-    tipe: "Masuk",
-    jumlah: 0,
-    kategori: "Iuran"
-  });
+  const [summary, setSummary] = useState({ masuk: 0, keluar: 0, saldo: 0 });
+  const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: kas, error } = await supabase
+      if (!selectedPerumahanId) return;
+
+      const { data: transactions } = await supabase
         .from('arus_kas')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .eq('perumahan_id', selectedPerumahanId)
+        .order('tanggal', { ascending: false });
       
-      if (error) throw error;
-      setData(kas || []);
+      setData(transactions || []);
+
+      const masuk = transactions?.filter(t => t.tipe === "Masuk").reduce((acc, curr) => acc + curr.jumlah, 0) || 0;
+      const keluar = transactions?.filter(t => t.tipe === "Keluar").reduce((acc, curr) => acc + curr.jumlah, 0) || 0;
+      setSummary({ masuk, keluar, saldo: masuk - keluar });
     } catch {
-      toaster.create({
-        title: "Gagal mengambil data arus kas",
-        type: "error",
-      });
+      console.error("Gagal memuat data");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPerumahanId]);
 
-  const handleOpenDialog = () => {
-    setFormData({
-      tanggal: new Date().toISOString().split('T')[0],
-      keterangan: "",
-      tipe: "Masuk",
-      jumlah: 0,
-      kategori: "Iuran"
-    });
-    setIsDialogOpen(true);
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const { data: lastRecord } = await supabase
-        .from('arus_kas')
-        .select('saldo_after')
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      const lastBalance = lastRecord?.[0]?.saldo_after || 0;
-      const newBalance = formData.tipe === "Masuk" 
-        ? lastBalance + formData.jumlah 
-        : lastBalance - formData.jumlah;
+  const filteredData = data.filter(item => 
+    item.keterangan?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-      const { error } = await supabase
-        .from('arus_kas')
-        .insert([{
-          ...formData,
-          saldo_before: lastBalance,
-          saldo_after: newBalance
-        }]);
-
-      if (error) throw error;
-      
-      toaster.create({
-        title: "Berhasil",
-        description: "Catatan arus kas berhasil disimpan",
-        type: "success",
-      });
-      setIsDialogOpen(false);
-      fetchData();
-    } catch (error) {
-      toaster.create({
-        title: "Gagal menyimpan data",
-        description: error.message,
-        type: "error",
-      });
-    }
-  };
-
-  const currentBalance = data[0]?.saldo_after || 0;
-  const totalMasuk = data.filter(i => i.tipe === "Masuk").reduce((a, b) => a + b.jumlah, 0);
-  const totalKeluar = data.filter(i => i.tipe === "Keluar").reduce((a, b) => a + b.jumlah, 0);
+  if (profile?.role === 'super_admin' && !selectedPerumahanId) {
+    return <SelectionRequired />;
+  }
 
   return (
-    <VStack spacing={6} align="stretch" width="full">
-      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
-        <Box>
-          <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Arus Kas</Heading>
-          <Text color="gray.500">Pantau seluruh pemasukan dan pengeluaran paguyuban.</Text>
-        </Box>
-        
-        <DialogRoot 
-          open={isDialogOpen} 
-          onOpenChange={(e) => setIsDialogOpen(e.open)}
-          placement="center"
-        >
-          <Button colorScheme="blue" leftIcon={<Icon as={Plus} boxSize={4} />} onClick={handleOpenDialog}>
-            Tambah Catatan
-          </Button>
-          
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Catat Arus Kas</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <DialogBody pb={6}>
-                <Stack spacing={4}>
-                  <HStack spacing={4}>
-                    <Field label="Tipe" required>
-                      <SelectRoot 
-                        value={[formData.tipe]} 
-                        onValueChange={(e) => setFormData({...formData, tipe: e.value[0]})}
-                      >
-                        <SelectTrigger>
-                          <SelectValueText />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem item="Masuk" key="Masuk">Pemasukan</SelectItem>
-                          <SelectItem item="Keluar" key="Keluar">Pengeluaran</SelectItem>
-                        </SelectContent>
-                      </SelectRoot>
-                    </Field>
-                    <Field label="Tanggal" required>
-                      <Input 
-                        type="date"
-                        value={formData.tanggal}
-                        onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
-                      />
-                    </Field>
-                  </HStack>
+    <div className="bg-transparent">
+      <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Arus Kas</h1>
+            <p className="text-slate-500 text-sm">Monitor aliran dana masuk dan keluar kompleks Anda.</p>
+          </div>
+          <div className="flex gap-3">
+            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg font-semibold text-sm hover:bg-slate-50 transition-all">
+              <FileText className="w-4 h-4 text-slate-400" /> Export PDF
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:opacity-90 transition-all shadow-sm">
+              <Plus className="w-4 h-4" /> Tambah Transaksi
+            </button>
+          </div>
+        </div>
 
-                  <Field label="Kategori" required>
-                    <SelectRoot 
-                      value={[formData.kategori]} 
-                      onValueChange={(e) => setFormData({...formData, kategori: e.value[0]})}
-                    >
-                      <SelectTrigger>
-                        <SelectValueText />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem item="Iuran" key="Iuran">Iuran Warga</SelectItem>
-                        <SelectItem item="Donasi" key="Donasi">Donasi</SelectItem>
-                        <SelectItem item="Kebersihan" key="Kebersihan">Kebersihan</SelectItem>
-                        <SelectItem item="Keamanan" key="Keamanan">Keamanan</SelectItem>
-                        <SelectItem item="Perbaikan" key="Perbaikan">Perbaikan Umum</SelectItem>
-                        <SelectItem item="Lainnya" key="Lainnya">Lain-lain</SelectItem>
-                      </SelectContent>
-                    </SelectRoot>
-                  </Field>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-slate-900">Rp {summary.masuk.toLocaleString()}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pemasukan</p>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-600">
+              <TrendingDown className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-slate-900">Rp {summary.keluar.toLocaleString()}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pengeluaran</p>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600">
+              <WalletCards className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xl font-bold text-slate-900">Rp {summary.saldo.toLocaleString()}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Saldo Akhir</p>
+            </div>
+          </div>
+        </div>
 
-                  <Field label="Jumlah (Rp)" required>
-                    <Input 
-                      type="number"
-                      value={formData.jumlah || ""}
-                      onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
-                    />
-                  </Field>
+        {/* Transactions Table */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 bg-white flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 md:w-80">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Cari transaksi..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:border-indigo-600 transition-all"
+              />
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all">
+              <Filter className="w-4 h-4" /> Filter
+            </button>
+          </div>
 
-                  <Field label="Keterangan" required>
-                    <Input 
-                      placeholder="Contoh: Pembayaran Gaji Security Jan"
-                      value={formData.keterangan}
-                      onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
-                    />
-                  </Field>
-                </Stack>
-              </DialogBody>
-              
-              <DialogFooter>
-                <DialogActionTrigger asChild>
-                  <Button variant="ghost">Batal</Button>
-                </DialogActionTrigger>
-                <Button type="submit" colorScheme="blue">Simpan Catatan</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </DialogRoot>
-      </Flex>
-
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-        <StatCard
-          label="Total Saldo (Saat Ini)"
-          value={`Rp ${currentBalance.toLocaleString('id-ID')}`}
-          icon={WalletCards}
-          color="blue"
-          loading={loading}
-        />
-        <StatCard
-          label="Total Pemasukan"
-          value={`Rp ${totalMasuk.toLocaleString('id-ID')}`}
-          icon={ArrowUpRight}
-          color="green"
-          loading={loading}
-        />
-        <StatCard
-          label="Total Pengeluaran"
-          value={`Rp ${totalKeluar.toLocaleString('id-ID')}`}
-          icon={ArrowDownRight}
-          color="red"
-          loading={loading}
-        />
-      </SimpleGrid>
-
-      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
-        <Box overflowX="auto">
-          <Table.Root variant="simple">
-            <Table.Header bg="gray.50">
-              <Table.Row>
-                <Table.ColumnHeader>Tanggal</Table.ColumnHeader>
-                <Table.ColumnHeader>Keterangan</Table.ColumnHeader>
-                <Table.ColumnHeader>Kategori</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Jumlah</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Saldo Akhir</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {loading ? (
-                <Table.Row>
-                  <Table.Cell colSpan={5} py={10}>
-                    <Center>
-                      <HStack spacing={3} color="gray.500">
-                        <Spinner size="sm" />
-                        <Text>Memuat data kas...</Text>
-                      </HStack>
-                    </Center>
-                  </Table.Cell>
-                </Table.Row>
-              ) : data.length === 0 ? (
-                <Table.Row>
-                  <Table.Cell colSpan={5} textAlign="center" py={10} color="gray.500">
-                    Belum ada catatan arus kas.
-                  </Table.Cell>
-                </Table.Row>
-              ) : (
-                data.map((item) => (
-                  <Table.Row key={item.id} _hover={{ bg: "gray.50/50" }}>
-                    <Table.Cell fontSize="sm">
-                      {new Date(item.tanggal).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Text fontWeight="medium" fontSize="sm">{item.keterangan}</Text>
-                    </Table.Cell>
-                    <Table.Cell>
-                      <Badge 
-                        variant="outline" 
-                        size="sm"
-                        colorScheme={item.tipe === "Masuk" ? "green" : "red"}
-                      >
-                        {item.kategori}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell textAlign="right" color={item.tipe === "Masuk" ? "green.600" : "red.600"} fontWeight="bold">
-                      {item.tipe === "Masuk" ? "+" : "-"} Rp {item.jumlah.toLocaleString('id-ID')}
-                    </Table.Cell>
-                    <Table.Cell textAlign="right" fontWeight="bold" color="gray.900" bg="gray.50/30">
-                      Rp {item.saldo_after.toLocaleString('id-ID')}
-                    </Table.Cell>
-                  </Table.Row>
-                ))
-              )}
-            </Table.Body>
-          </Table.Root>
-        </Box>
-      </Box>
-    </VStack>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest">Tanggal</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest">Keterangan</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest">Tipe</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest text-right">Jumlah</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array(5).fill(0).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={5} className="px-6 py-4"><div className="h-4 bg-slate-100 rounded"></div></td>
+                    </tr>
+                  ))
+                ) : filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-10 text-center text-slate-400 font-medium">Tidak ada transaksi.</td>
+                  </tr>
+                ) : filteredData.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50 border-b border-slate-50 transition-all">
+                    <td className="px-6 py-4 text-xs font-semibold text-slate-500">
+                      {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-800">{item.keterangan}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        item.tipe === "Masuk" ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+                      }`}>
+                        {item.tipe}
+                      </span>
+                    </td>
+                    <td className={`px-6 py-4 text-sm font-bold text-right ${
+                      item.tipe === "Masuk" ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      Rp {item.jumlah?.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="text-slate-400 hover:text-indigo-600 transition-all">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

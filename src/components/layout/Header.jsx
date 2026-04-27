@@ -1,89 +1,66 @@
-import { Bell, Search, Building2, User as UserIcon, Keyboard, Activity } from "lucide-react";
-import {
-  Flex,
-  Box,
-  HStack,
-  Text,
-  Badge,
-  Icon,
-  Input,
-  IconButton,
-  VStack,
-  Circle,
-  Kbd,
-  Spacer,
-  Heading,
-  Button,
-} from "@chakra-ui/react";
-import { InputGroup } from "@/components/ui/chakra/input-group";
-import { Avatar } from "@/components/ui/chakra/avatar";
+import { Search, Bell, ChevronDown, Building2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-export function Header({ title = "Dashboard" }) {
-  const { profile } = useAuth();
+export function Header() {
+  const { profile, perumahanList, selectedPerumahanId, switchPerumahan } = useAuth();
 
   return (
-    <Flex
-      as="header" position="sticky" top="0" zIndex="10" height="80px"
-      alignItems="center" bg="transparent" px={{ base: 4, md: 8 }} gap={4}
-    >
-      <Flex flex="1" align="center" gap={6}>
-        <Heading size="xl" fontWeight="800" color="gray.900" letterSpacing="-0.03em">
-          {title}
-        </Heading>
+    <header className="fixed top-0 right-0 left-64 h-16 bg-white border-b border-slate-200 z-40 px-6">
+      <div className="h-full flex items-center justify-between">
+        {/* Left Side: Search or Switcher */}
+        <div className="flex items-center gap-4">
+          {profile?.role === 'super_admin' && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              <select 
+                className="bg-transparent text-xs font-bold text-indigo-900 focus:outline-none cursor-pointer"
+                value={selectedPerumahanId || ""}
+                onChange={(e) => switchPerumahan(e.target.value)}
+              >
+                <option value="" disabled>Pilih Perumahan...</option>
+                {perumahanList.map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.nama} {item.status === 'suspended' ? '(Suspended)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-        <Spacer />
-
-        {/* Minimalist Search Bar */}
-        <Box display={{ base: "none", lg: "block" }} width="sm">
-          <InputGroup 
-            flex="1" 
-            startElement={<Icon as={Search} color="gray.400" boxSize={4} />}
-            endElement={(
-              <HStack spacing={1} mr={2}>
-                <Kbd bg="white" color="gray.300" fontSize="10px" border="1px solid" borderColor="gray.100" boxShadow="none">⌘ K</Kbd>
-              </HStack>
-            )}
-          >
-            <Input
+          <div className="relative w-64 md:w-80">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-slate-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-600 transition-all"
               placeholder="Search anything..."
-              bg="white" border="1px solid" borderColor="gray.100"
-              _focus={{ borderColor: "emerald.400", boxShadow: "0 0 0 4px rgba(16, 185, 129, 0.1)" }}
-              height="44px" fontSize="sm" fontWeight="500" borderRadius="12px"
             />
-          </InputGroup>
-        </Box>
-      </Flex>
+          </div>
+        </div>
 
-      <HStack spacing={4}>
-        {/* Date / Time Period */}
-        <Button 
-          variant="ghost" size="sm" fontWeight="700" color="gray.400" fontSize="xs" borderRadius="10px"
-        >
-          <HStack spacing={1}>
-            <Icon as={Activity} boxSize={3} />
-            <Text>Time period: Last 30 days</Text>
-          </HStack>
-        </Button>
+        {/* Right Side */}
+        <div className="flex items-center gap-6">
+          <button className="relative p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-full transition-all">
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 border-2 border-white rounded-full"></span>
+          </button>
 
-        {/* Notifications */}
-        <IconButton
-          variant="ghost" aria-label="Notifications" borderRadius="12px" color="gray.400"
-          _hover={{ color: "emerald.500", bg: "emerald.50" }}
-        >
-          <Bell size={20} />
-        </IconButton>
+          <div className="h-6 w-px bg-slate-200"></div>
 
-        {/* Minimal User Profile */}
-        <HStack spacing={3} pl={2} textAlign="right" display={{ base: "none", sm: "block" }}>
-          <Box>
-            <Text fontSize="xs" fontWeight="800" color="gray.900" lineHeight="1">{profile?.nama || "User"}</Text>
-            <Text fontSize="9px" fontWeight="700" color="gray.400" textTransform="uppercase" mt={0.5}>
-              {profile?.role === 'super_admin' ? "Admin Manager" : "Resident"}
-            </Text>
-          </Box>
-        </HStack>
-      </HStack>
-    </Flex>
+          {/* User Profile */}
+          <button className="flex items-center gap-3 px-2 py-1 hover:bg-slate-50 rounded-lg transition-all group text-left">
+            <div className="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+              {profile?.nama?.charAt(0) || "U"}
+            </div>
+            <div className="hidden md:block">
+              <p className="text-sm font-semibold text-slate-900 leading-tight">{profile?.nama || "Admin"}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{profile?.role?.replace('_', ' ')}</p>
+            </div>
+            <ChevronDown className="h-4 w-4 text-slate-400 group-hover:rotate-180 transition-all" />
+          </button>
+        </div>
+      </div>
+    </header>
   );
 }

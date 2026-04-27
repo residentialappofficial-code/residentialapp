@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 'use client'
 
 import {
@@ -17,10 +18,10 @@ import { useRichTextEditorContext } from './rich-text-editor-context'
 import { Tooltip } from './tooltip'
 import * as React from 'react'
 import {
-  AlignCenter,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
+  AlignCenter as AlignCenterIcon,
+  AlignJustify as AlignJustifyIcon,
+  AlignLeft as AlignLeftIcon,
+  AlignRight as AlignRightIcon,
   Bold as BoldIcon,
   Code as CodeIcon,
   Heading1,
@@ -37,9 +38,9 @@ import {
   Quote,
   RotateCcw,
   RotateCw,
-  Strikethrough,
-  Subscript,
-  Superscript,
+  Strikethrough as StrikethroughIcon,
+  Subscript as SubscriptIcon,
+  Superscript as SuperscriptIcon,
   Type,
   Underline as UnderlineIcon,
 } from 'lucide-react'
@@ -321,7 +322,7 @@ export const Underline = createBooleanControl({
 
 export const Strikethrough = createBooleanControl({
   label: 'Strikethrough',
-  icon: Strikethrough,
+  icon: StrikethroughIcon,
   command: (editor) => editor.chain().focus().toggleStrike().run(),
   getVariant: (editor) => (editor.isActive('strike') ? 'subtle' : 'ghost'),
 })
@@ -335,14 +336,14 @@ export const Code = createBooleanControl({
 
 export const Subscript = createBooleanControl({
   label: 'Subscript',
-  icon: Subscript,
+  icon: SubscriptIcon,
   command: (editor) => editor.chain().focus().toggleSubscript().run(),
   getVariant: (editor) => (editor.isActive('subscript') ? 'subtle' : 'ghost'),
 })
 
 export const Superscript = createBooleanControl({
   label: 'Superscript',
-  icon: Superscript,
+  icon: SuperscriptIcon,
   command: (editor) => editor.chain().focus().toggleSuperscript().run(),
   getVariant: (editor) => (editor.isActive('superscript') ? 'subtle' : 'ghost'),
 })
@@ -432,7 +433,7 @@ export const Unlink = createBooleanControl({
 
 export const AlignLeft = createBooleanControl({
   label: 'Align Left',
-  icon: AlignLeft,
+  icon: AlignLeftIcon,
   command: (editor) => editor.chain().focus().setTextAlign('left').run(),
   getVariant: (editor) =>
     editor.isActive({ textAlign: 'left' }) ? 'subtle' : 'ghost',
@@ -440,7 +441,7 @@ export const AlignLeft = createBooleanControl({
 
 export const AlignCenter = createBooleanControl({
   label: 'Align Center',
-  icon: AlignCenter,
+  icon: AlignCenterIcon,
   command: (editor) => editor.chain().focus().setTextAlign('center').run(),
   getVariant: (editor) =>
     editor.isActive({ textAlign: 'center' }) ? 'subtle' : 'ghost',
@@ -448,7 +449,7 @@ export const AlignCenter = createBooleanControl({
 
 export const AlignJustify = createBooleanControl({
   label: 'Align Justify',
-  icon: AlignJustify,
+  icon: AlignJustifyIcon,
   command: (editor) => editor.chain().focus().setTextAlign('justify').run(),
   getVariant: (editor) =>
     editor.isActive({ textAlign: 'justify' }) ? 'subtle' : 'ghost',
@@ -456,7 +457,7 @@ export const AlignJustify = createBooleanControl({
 
 export const AlignRight = createBooleanControl({
   label: 'Align Right',
-  icon: AlignRight,
+  icon: AlignRightIcon,
   command: (editor) => editor.chain().focus().setTextAlign('right').run(),
   getVariant: (editor) =>
     editor.isActive({ textAlign: 'right' }) ? 'subtle' : 'ghost',

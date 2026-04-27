@@ -15,7 +15,7 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'sb-vhrkqekmzujnecraviwd-auth-token',
+      storageKey: 'sb-qjbdgyidvplmapijtgrm-auth-token',
       lock: null,
     }
   }

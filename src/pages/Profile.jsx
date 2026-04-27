@@ -1,281 +1,289 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
+import { User, Mail, Phone, MapPin, Camera, Shield, LogOut, Key, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { 
-  Box, 
-  VStack, 
-  HStack, 
-  Heading, 
-  Text, 
-  Input, 
-  Button, 
-  Icon, 
-  Flex,
-  Stack,
-  Badge,
-  Separator
-} from "@chakra-ui/react";
-import { Avatar } from "@/components/ui/chakra/avatar";
-import { Field } from "@/components/ui/chakra/field";
-import { toaster } from "@/components/ui/chakra/toaster";
-import { Camera, User, Mail, Phone, ShieldCheck, MapPin } from "lucide-react";
 
 export default function Profile() {
-  const { profile, updateProfile } = useAuth();
+  const { profile, signOut, role } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
-
   const [formData, setFormData] = useState({
     nama: profile?.nama || "",
     email: profile?.email || "",
-    no_hp: profile?.no_hp || "",
+    telepon: profile?.telepon || "",
+    alamat: profile?.alamat || "",
   });
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const [isResident, setIsResident] = useState(false);
+  const [residentInfo, setResidentInfo] = useState(null);
+  const [showRegisterResident, setShowRegisterResident] = useState(false);
+  const [regData, setRegData] = useState({ blok: "", status_hunian: "Pemilik" });
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        nama: profile.nama || "",
+        email: profile.email || "",
+        telepon: profile.telepon || "",
+        alamat: profile.alamat || "",
+      });
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    async function checkResident() {
+      if (!profile?.id) return;
+      const { data } = await supabase
+        .from('warga')
+        .select('*')
+        .eq('user_id', profile.id)
+        .single();
+      
+      if (data) {
+        setIsResident(true);
+        setResidentInfo(data);
+      }
+    }
+    checkResident();
+  }, [profile]);
+
+  const handleRegisterResident = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const { error } = await updateProfile(formData);
+      const { error } = await supabase.from('warga').insert([{
+        user_id: profile.id,
+        nama: profile.nama,
+        email: profile.email,
+        perumahan_id: profile.perumahan_id,
+        blok: regData.blok,
+        status_hunian: regData.status_hunian
+      }]);
+
       if (error) throw error;
-      toaster.create({
-        title: "Profil Diperbarui",
-        description: "Data Anda berhasil disimpan.",
-        type: "success",
-      });
+      alert("Anda telah terdaftar sebagai warga!");
+      window.location.reload();
     } catch (error) {
-      toaster.create({
-        title: "Gagal memperbarui profil",
-        description: error.message,
-        type: "error",
-      });
+      alert(error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAvatarClick = () => {
-    fileInputRef.current.click();
-  };
-
-  const handleFileChange = async (e) => {
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
     try {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      // Validasi file
-      if (file.size > 2 * 1024 * 1024) {
-        toaster.create({ title: "File terlalu besar", description: "Maksimal 2MB", type: "warning" });
-        return;
-      }
-
-      setUploading(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `avatars/${profile.id}-${Math.random()}.${fileExt}`;
-
-      // 1. Upload ke R2 via API kita
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('fileName', fileName);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) throw new Error(result.error || 'Gagal mengunggah ke R2');
-
-      // 2. Update Database Supabase dengan URL dari R2
-      const { error: updateError } = await updateProfile({ avatar_url: result.url });
-      if (updateError) throw updateError;
-
-      toaster.create({
-        title: "Foto Berhasil Diubah",
-        description: "Tersimpan di Cloudflare R2",
-        type: "success",
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .update(formData)
+        .eq('id', profile.id);
+      
+      if (error) throw error;
+      alert("Profile updated successfully");
     } catch (error) {
-      toaster.create({
-        title: "Gagal mengunggah foto",
-        description: error.message,
-        type: "error",
-      });
+      alert(error.message);
     } finally {
-      setUploading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Box maxW="800px" mx="auto" py={6}>
-      <VStack spacing={8} align="stretch">
-        {/* Header Profil */}
-        <Box 
-          bg="white" 
-          borderRadius="3xl" 
-          p={8} 
-          shadow="sm" 
-          border="1px solid" 
-          borderColor="gray.100"
-          position="relative"
-          overflow="hidden"
-        >
-          {/* Accent Background */}
-          <Box 
-            position="absolute" 
-            top="0" 
-            left="0" 
-            right="0" 
-            h="120px" 
-            bgGradient="to-br" 
-            gradientFrom="emerald.400" 
-            gradientTo="emerald.600" 
-            opacity="0.1" 
-          />
+    <div className="bg-transparent">
+      <div className="max-w-4xl mx-auto flex flex-col gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Account Settings</h1>
+          <p className="text-slate-500 text-sm font-medium">Manage your personal information and security preferences.</p>
+        </div>
 
-          <Flex direction={{ base: "column", md: "row" }} align={{ base: "center", md: "end" }} gap={6} position="relative" pt={4}>
-            <Box position="relative" cursor="pointer" onClick={handleAvatarClick} _hover={{ opacity: 0.9 }}>
-              <Avatar 
-                size="2xl" 
-                name={profile?.nama} 
-                src={profile?.avatar_url}
-                border="4px solid white"
-                boxShadow="xl"
-                bg="emerald.50"
-              />
-              <Box 
-                position="absolute" 
-                bottom="2" 
-                right="2" 
-                bg="white" 
-                p={2} 
-                borderRadius="full" 
-                shadow="md"
-                color="emerald.600"
-              >
-                <Icon as={Camera} boxSize={4} />
-              </Box>
-              {uploading && (
-                <Flex 
-                  position="absolute" inset="0" borderRadius="full" 
-                  bg="blackAlpha.400" align="center" justify="center"
-                >
-                  <Text color="white" fontSize="xs" fontWeight="bold">UPLOADING...</Text>
-                </Flex>
-              )}
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleFileChange} 
-                style={{ display: 'none' }} 
-                accept="image/*"
-              />
-            </Box>
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Sidebar Settings */}
+          <div className="w-full md:w-64 flex flex-col gap-1">
+            <button className="flex items-center gap-3 px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 font-bold text-sm shadow-sm transition-all">
+              <User className="w-4 h-4" /> Personal Info
+            </button>
+            <button className="flex items-center gap-3 px-4 py-2.5 text-slate-500 font-bold text-sm hover:bg-slate-100 rounded-lg transition-all">
+              <Shield className="w-4 h-4" /> Password & Security
+            </button>
+            <div className="h-px bg-slate-200 my-2" />
+            <button 
+              onClick={signOut}
+              className="flex items-center gap-3 px-4 py-2.5 text-red-500 font-bold text-sm hover:bg-red-50 rounded-lg transition-all text-left"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
+          </div>
 
-            <VStack align={{ base: "center", md: "start" }} spacing={1} flex="1">
-              <HStack>
-                <Heading size="xl" fontWeight="900" color="gray.900">{profile?.nama}</Heading>
-                <Badge colorScheme="emerald" variant="subtle" borderRadius="full" px={3} py={1}>
-                  {profile?.role?.replace('_', ' ').toUpperCase()}
-                </Badge>
-              </HStack>
-              <HStack spacing={4} color="gray.500" fontSize="sm">
-                <HStack><Icon as={MapPin} boxSize={3} /> <Text>{profile?.perumahan?.nama || "Perumahan"}</Text></HStack>
-                <HStack><Icon as={ShieldCheck} boxSize={3} /> <Text>Blok {profile?.blok} - No. {profile?.nomor_rumah}</Text></HStack>
-              </HStack>
-            </VStack>
-          </Flex>
-        </Box>
+          {/* Form Content */}
+          <div className="flex-1 flex flex-col gap-6">
+            <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+              <form onSubmit={handleUpdate} className="flex flex-col gap-4">
+                <div className="flex items-center gap-6">
+                  <div className="relative">
+                    <div className="w-20 h-20 bg-slate-800 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+                      {formData.nama?.charAt(0)}
+                    </div>
+                    <button type="button" className="absolute -bottom-2 -right-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm hover:bg-slate-50">
+                      <Camera className="w-4 h-4 text-slate-600" />
+                    </button>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">{formData.nama}</h3>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">{role?.replace('_', ' ')}</p>
+                    <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded text-[10px] font-bold uppercase">Active Account</span>
+                  </div>
+                </div>
 
-        {/* Form Data Diri */}
-        <Box bg="white" borderRadius="3xl" p={8} shadow="sm" border="1px solid" borderColor="gray.100">
-          <form onSubmit={handleSave}>
-            <VStack spacing={6} align="stretch">
-              <Heading size="md" fontWeight="800" mb={2}>Informasi Pribadi</Heading>
-              
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                <Field label="Nama Lengkap" required helperText="Gunakan nama asli Anda.">
-                  <HStack width="full">
-                    <Icon as={User} color="gray.400" />
-                    <Input 
-                      placeholder="Masukkan nama"
-                      value={formData.nama}
+                <div className="h-px bg-slate-100" />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Full Name</label>
+                    <input 
+                      value={formData.nama} 
                       onChange={(e) => setFormData({...formData, nama: e.target.value})}
-                      bg="gray.50" border="none" _focus={{ bg: "white", boxShadow: "0 0 0 2px var(--chakra-colors-emerald-500)" }}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all"
                     />
-                  </HStack>
-                </Field>
-
-                <Field label="Alamat Email" required>
-                  <HStack width="full">
-                    <Icon as={Mail} color="gray.400" />
-                    <Input 
-                      type="email"
-                      placeholder="email@contoh.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      bg="gray.50" border="none" _focus={{ bg: "white", boxShadow: "0 0 0 2px var(--chakra-colors-emerald-500)" }}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Email Address</label>
+                    <input 
+                      value={formData.email} 
+                      disabled
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium bg-slate-50 text-slate-500 cursor-not-allowed"
                     />
-                  </HStack>
-                </Field>
-
-                <Field label="Nomor WhatsApp" required>
-                  <HStack width="full">
-                    <Icon as={Phone} color="gray.400" />
-                    <Input 
-                      placeholder="0812xxxx"
-                      value={formData.no_hp}
-                      onChange={(e) => setFormData({...formData, no_hp: e.target.value})}
-                      bg="gray.50" border="none" _focus={{ bg: "white", boxShadow: "0 0 0 2px var(--chakra-colors-emerald-500)" }}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Phone Number</label>
+                    <input 
+                      value={formData.telepon} 
+                      onChange={(e) => setFormData({...formData, telepon: e.target.value})}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all"
                     />
-                  </HStack>
-                </Field>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Home Address</label>
+                    <input 
+                      value={formData.alamat} 
+                      onChange={(e) => setFormData({...formData, alamat: e.target.value})}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-600 transition-all"
+                    />
+                  </div>
+                </div>
 
-                <Field label="Role & Lokasi" readOnly helperText="Hanya bisa diubah oleh pengurus.">
-                  <Input 
-                    value={`${profile?.role?.replace('_', ' ')} | Blok ${profile?.blok}`}
-                    readOnly
-                    bg="gray.100" border="none" color="gray.500" cursor="not-allowed"
-                  />
-                </Field>
-              </SimpleGrid>
+                <div className="flex justify-end pt-4">
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="bg-slate-900 text-white px-8 py-2 rounded-lg font-bold text-sm shadow-md hover:bg-slate-800 transition-all flex items-center gap-2"
+                  >
+                    {loading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
 
-              <Separator my={4} />
+            <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-md font-bold text-slate-900">Resident Status</h4>
+                  <p className="text-xs text-slate-500 font-medium mt-1">Manage your identity as a resident in this complex.</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${isResident ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
+                  {isResident ? 'Registered' : 'Not Registered'}
+                </span>
+              </div>
 
-              <Flex justify="end">
-                <Button 
-                  type="submit" 
-                  colorScheme="emerald" 
-                  size="lg" 
-                  px={10}
-                  loading={loading}
-                  borderRadius="xl"
-                  boxShadow="0 4px 12px rgba(16, 185, 129, 0.2)"
+              {isResident ? (
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Block / House Number</p>
+                    <p className="text-sm font-bold text-slate-900">{residentInfo?.blok || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Occupancy Status</p>
+                    <p className="text-sm font-bold text-slate-900">{residentInfo?.status_hunian || '-'}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-6 bg-indigo-50/50 rounded-xl border border-indigo-100 flex flex-col items-center text-center gap-4">
+                  <p className="text-sm text-indigo-900 font-medium">
+                    You are currently managing this complex but not listed as a resident. 
+                    Would you like to register yourself as a resident?
+                  </p>
+                  <button 
+                    onClick={() => setShowRegisterResident(true)}
+                    className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-indigo-700 transition-all"
+                  >
+                    Register as Resident
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-slate-950 p-6 rounded-xl flex justify-between items-center text-white">
+              <div className="flex flex-col gap-1">
+                <p className="text-md font-bold">Complex Settings</p>
+                <p className="text-xs text-slate-400">Update your housing complex identity and public information.</p>
+              </div>
+              <button 
+                onClick={() => window.location.href = '/my-complex'}
+                className="bg-white text-slate-950 px-4 py-2 rounded-lg font-bold text-sm hover:opacity-90 transition-all shadow-sm"
+              >
+                Manage Complex
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Registration Modal */}
+      {showRegisterResident && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Daftar sebagai Warga</h3>
+            <p className="text-sm text-slate-500 mb-6">Lengkapi data hunian Anda di komplek ini.</p>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Blok / Nomor Rumah</label>
+                <input 
+                  placeholder="Contoh: A1/10"
+                  value={regData.blok}
+                  onChange={(e) => setRegData({...regData, blok: e.target.value})}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-indigo-600"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status Hunian</label>
+                <select 
+                  value={regData.status_hunian}
+                  onChange={(e) => setRegData({...regData, status_hunian: e.target.value})}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-indigo-600"
                 >
-                  Simpan Perubahan
-                </Button>
-              </Flex>
-            </VStack>
-          </form>
-        </Box>
-      </VStack>
-    </Box>
-  );
-}
+                  <option value="Pemilik">Pemilik</option>
+                  <option value="Kontrak">Kontrak</option>
+                </select>
+              </div>
+            </div>
 
-// Helper untuk SimpleGrid jika belum diimport
-function SimpleGrid({ columns, spacing, children }) {
-  return (
-    <Box 
-      display="grid" 
-      gridTemplateColumns={{ 
-        base: `repeat(${columns.base || 1}, 1fr)`, 
-        md: `repeat(${columns.md || columns}, 1fr)` 
-      }} 
-      gap={spacing}
-    >
-      {children}
-    </Box>
+            <div className="flex gap-3 mt-8">
+              <button 
+                onClick={() => setShowRegisterResident(false)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button 
+                onClick={handleRegisterResident}
+                disabled={!regData.blok}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50"
+              >
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,269 +1,107 @@
-import { Link as RouterLink, useLocation } from "react-router-dom";
-import {
-  Box,
-  Flex,
-  VStack,
-  Text,
-  Icon,
-  Button,
-  HStack,
-  Spacer,
-  IconButton,
-} from "@chakra-ui/react";
-import { Avatar } from "@/components/ui/chakra/avatar";
-import { Tooltip } from "@/components/ui/chakra/tooltip";
-import {
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/chakra/select";
 import { 
-  LogOut, 
   LayoutDashboard, 
   Users, 
-  UserCog, 
-  Receipt, 
-  WalletCards, 
   Banknote, 
+  WalletCards, 
+  UserCog, 
   MessageSquare,
-  ChevronRight,
   Building2,
-  User
+  LogOut,
+  User,
+  Briefcase,
+  Settings,
+  ShieldCheck,
+  FileText,
+  Megaphone,
+  MessageSquareWarning,
+  Hammer
 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-const allItems = [
-  {
-    title: "Manajemen Komplek",
-    url: "/manage-complexes",
-    icon: Building2,
-    roles: ["super_admin"],
-  },
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-    roles: ["super_admin", "admin", "resident"],
-  },
-  {
-    title: "Data Warga",
-    url: "/warga",
-    icon: Users,
-    roles: ["super_admin", "admin"],
-  },
-  {
-    title: "Data Pengurus",
-    url: "/pengurus",
-    icon: UserCog,
-    roles: ["super_admin", "admin"],
-  },
-  {
-    title: "Pembayaran Iuran",
-    url: "/iuran",
-    icon: Receipt,
-    roles: ["super_admin", "admin", "resident"],
-  },
-  {
-    title: "Arus Kas",
-    url: "/kas",
-    icon: WalletCards,
-    roles: ["super_admin", "admin"],
-  },
-  {
-    title: "Penggajian",
-    url: "/penggajian",
-    icon: Banknote,
-    roles: ["super_admin", "admin"],
-  },
-  {
-    title: "Forum Warga",
-    url: "/forum",
-    icon: MessageSquare,
-    roles: ["super_admin", "admin", "resident"],
-  },
-  {
-    title: "Profil Saya",
-    url: "/profile",
-    icon: User,
-    roles: ["super_admin", "admin", "resident"],
-  },
-];
-
-const NAV_WIDTHS = {
-  icon: "80px",
-  label: "240px",
-};
-
-const NavItem = ({ item, isActive, variant = "label" }) => {
-  if (variant === "icon") {
-    return (
-      <IconButton
-        as={RouterLink}
-        to={item.url}
-        variant="ghost"
-        aria-label={item.title}
-        color={isActive ? "emerald.600" : "gray.400"}
-        bg={isActive ? "emerald.50" : "transparent"}
-        _hover={{ bg: "gray.50", color: "emerald.500" }}
-        borderRadius="14px"
-        size="lg"
-        icon={<Icon as={item.icon} boxSize={5} />}
-      />
-    );
-  }
-
-  return (
-    <Button
-      as={RouterLink}
-      to={item.url}
-      variant="ghost"
-      justifyContent="start"
-      height="44px"
-      bg={isActive ? "emerald.50" : "transparent"}
-      color={isActive ? "emerald.700" : "gray.500"}
-      _hover={{ bg: isActive ? "emerald.50" : "gray.100", color: isActive ? "emerald.700" : "gray.700" }}
-      px={3}
-      borderRadius="10px"
-      fontWeight={isActive ? "700" : "500"}
-      fontSize="sm"
-    >
-      <HStack spacing={3} width="full">
-        <Icon as={item.icon} boxSize={4} />
-        <Text>{item.title}</Text>
-        {isActive && <Box ml="auto" h={1.5} w={1.5} borderRadius="full" bg="emerald.500" />}
-      </HStack>
-    </Button>
-  );
-};
-
-export function AppSidebar({ role = "resident" }) {
+export function AppSidebar() {
+  const { signOut, role } = useAuth();
   const location = useLocation();
-  const { profile, signOut, perumahanList, selectedPerumahanId, switchPerumahan } = useAuth();
-  
-  const getIsActive = (url) => location.pathname === url || location.pathname.startsWith(`${url}/`);
 
-  const activePerumahan = perumahanList.find(p => p.id === selectedPerumahanId);
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      toaster.create({
-        title: "Berhasil Keluar",
-        description: "Sampai jumpa kembali!",
-        type: "success",
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
+  const menuGroups = [
+    {
+      name: "Main Menu",
+      items: [
+        { icon: LayoutDashboard, label: "Dashboard", to: "/" },
+        { icon: Building2, label: "All Complexes", to: "/manage-complexes", roles: ["super_admin"] },
+        { icon: Building2, label: "My Complex", to: "/my-complex", roles: ["admin"] },
+        { icon: Users, label: "Residents", to: "/warga" },
+        { icon: Banknote, label: "Payments", to: "/iuran" },
+        { icon: Settings, label: "Iuran Config", to: "/iuran-config", roles: ["admin"] },
+        { icon: FileText, label: "Manage Bills", to: "/manage-bills", roles: ["admin"] },
+        { icon: ShieldCheck, label: "Verify Payments", to: "/verify-payments", roles: ["admin"] },
+        { icon: WalletCards, label: "Cashflow", to: "/kas" },
+        { icon: Briefcase, label: "Payroll", to: "/penggajian" },
+        { icon: MessageSquare, label: "Forum", to: "/forum" },
+        { icon: Megaphone, label: "Announcements", to: "/announcements" },
+        { icon: MessageSquareWarning, label: "Complaints", to: "/complaints" },
+        { icon: Hammer, label: "Ketersediaan Aset", to: "/assets" },
+        { icon: UserCog, label: "Staff", to: "/pengurus" },
+      ]
+    },
+    {
+      name: "System",
+      items: [
+        { icon: User, label: "Profile", to: "/profile" },
+        { icon: Settings, label: "Settings", to: "/settings" },
+      ]
     }
-  };
+  ];
 
   return (
-    <Flex 
-      height="100vh" 
-      width="260px" 
-      bg="white" 
-      borderRight="1px solid" 
-      borderColor="gray.100"
-      direction="column"
-      py={8}
-      px={4}
-      position="sticky"
-      top="0"
-      zIndex="20"
-    >
-      {/* Branding */}
-      <Box px={2} mb={10}>
-        <HStack spacing={3}>
-          <Flex 
-            h={10} w={10} borderRadius="12px" bg="emerald.500" color="white" align="center" justify="center"
-            boxShadow="0 4px 12px rgba(16, 185, 129, 0.2)"
-          >
-            <Icon as={Building2} boxSize={5} />
-          </Flex>
-          <VStack align="start" spacing={0}>
-            <Text fontSize="xl" fontWeight="900" color="gray.900" letterSpacing="-0.02em" lineHeight="1.1">Flup</Text>
-            <Text fontSize="9px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.05em">
-              Residential Management
-            </Text>
-          </VStack>
-        </HStack>
-      </Box>
+    <aside className="fixed left-0 top-0 w-64 h-screen bg-slate-800 text-white flex flex-col z-50">
+      {/* Sidebar Header */}
+      <div className="px-6 py-8 flex items-center gap-3 border-b border-slate-700">
+        <div className="bg-indigo-600 p-2 rounded-lg">
+          <ShieldCheck className="w-6 h-6 text-white" />
+        </div>
+        <span className="font-bold text-xl tracking-tight">FineHome</span>
+      </div>
 
-      {/* Complex Switcher (Super Admin Only) */}
-      {profile?.role === 'super_admin' && perumahanList.length > 0 && (
-        <Box px={2} mb={6}>
-          <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.1em" mb={2}>
-            Pilih Komplek
-          </Text>
-          <SelectRoot 
-            size="sm"
-            value={[selectedPerumahanId]} 
-            onValueChange={(e) => switchPerumahan(e.value[0])}
-          >
-            <SelectTrigger bg="gray.50" border="none" borderRadius="10px">
-              <SelectValueText placeholder="Pilih Perumahan" fontWeight="700" fontSize="xs" color="gray.700" />
-            </SelectTrigger>
-            <SelectContent>
-              {perumahanList.map((p) => (
-                <SelectItem item={p.id} key={p.id}>
-                  <Text fontSize="xs" fontWeight="600">{p.nama}</Text>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </SelectRoot>
-        </Box>
-      )}
-
-      {/* Menu Items */}
-      <VStack align="stretch" spacing={1} flex="1">
-        <Text fontSize="10px" fontWeight="800" color="gray.400" textTransform="uppercase" letterSpacing="0.1em" px={2} mb={2}>
-          Main Menu
-        </Text>
-        {allItems.map((item) => (
-          <NavItem key={item.title} item={item} isActive={getIsActive(item.url)} />
+      {/* Sidebar Content */}
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        {menuGroups.map((group, index) => (
+          <div key={index} className="mb-8">
+            <h4 className="text-xs font-bold text-slate-400 mb-4 px-2 uppercase tracking-widest">
+              {group.name}
+            </h4>
+            <ul className="flex flex-col gap-1">
+              {group.items.filter(item => !item.roles || item.roles.includes(role)).map((item, i) => {
+                const active = location.pathname === item.to;
+                return (
+                  <li key={i}>
+                    <Link 
+                      to={item.to} 
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
+                        active ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="text-sm">{item.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         ))}
-      </VStack>
+      </div>
 
-      {/* Profile & Logout */}
-      <Box mt="auto" pt={4} borderTop="1px solid" borderColor="gray.100">
-        <HStack p={2} spacing={3} mb={2}>
-          <Avatar 
-            size="sm" 
-            name={profile?.nama || "User"} 
-            src={profile?.avatar_url}
-            border="2px solid" 
-            borderColor="emerald.50"
-          />
-          <VStack align="start" spacing={0} flex="1" minW="0">
-            <Text fontSize="xs" fontWeight="800" color="gray.900" noOfLines={1}>
-              {profile?.nama || "User"}
-            </Text>
-            <Text fontSize="10px" color="gray.500" textTransform="capitalize">
-              {profile?.role?.replace('_', ' ') || "Resident"}
-            </Text>
-          </VStack>
-        </HStack>
-        
-        <Button
-          variant="ghost" 
-          width="full"
-          justifyContent="start"
-          height="40px"
-          color="gray.500"
-          _hover={{ color: "red.600", bg: "red.50" }}
-          onClick={handleLogout}
-          borderRadius="10px"
-          fontSize="sm"
-          fontWeight="700"
+      {/* Sidebar Footer */}
+      <div className="p-4 border-t border-slate-700">
+        <button 
+          onClick={signOut}
+          className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 font-medium hover:text-white hover:bg-slate-700 rounded-lg transition-all"
         >
-          <HStack spacing={3}>
-            <Icon as={LogOut} boxSize={4} />
-            <Text>Keluar</Text>
-          </HStack>
-        </Button>
-      </Box>
-    </Flex>
+          <LogOut className="w-5 h-5" />
+          <span className="text-sm">Logout</span>
+        </button>
+      </div>
+    </aside>
   );
 }

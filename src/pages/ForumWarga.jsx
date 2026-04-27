@@ -1,243 +1,160 @@
-import { useState, useEffect } from "react";
-import { Send, MessageSquarePlus, MessageSquare, ThumbsUp, Loader2 } from "lucide-react";
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  Button,
-  VStack,
-  HStack,
-  Textarea,
-  Badge,
-  Icon,
-  Spinner,
-  Center,
-  Stack,
-  Tabs,
-} from "@chakra-ui/react";
-import {
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/chakra/select";
-import { Avatar } from "@/components/ui/chakra/avatar";
-import { toaster } from "@/components/ui/chakra/toaster";
+import { useState, useEffect, useCallback } from "react";
+import { Send, MessageSquare, ThumbsUp, Search, MoreVertical, Filter, Heart, Share2, MessageCircle, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+import { SelectionRequired } from "@/components/ui/SelectionRequired";
+
 export default function ForumWarga() {
-  const { profile } = useAuth();
+  const { profile, selectedPerumahanId } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newPostContent, setNewPostContent] = useState("");
-  const [newPostCategory, setNewPostCategory] = useState("Diskusi");
-  const [activeTab, setActiveTab] = useState("Semua");
+  const [newPost, setNewPost] = useState("");
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
-
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
-      let query = supabase.from('forum_posts').select('*');
+      if (!selectedPerumahanId) return;
       
-      if (profile?.role !== 'super_admin') {
-        query = query.eq('perumahan_id', profile?.perumahan_id);
-      }
+      const { data } = await supabase
+        .from('forum_posts')
+        .select(`
+          *,
+          author:profiles(nama, role)
+        `)
+        .eq('perumahan_id', selectedPerumahanId)
+        .order('created_at', { ascending: false });
       
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
       setPosts(data || []);
     } catch {
-      toaster.create({
-        title: "Gagal mengambil postingan forum",
-        type: "error",
-      });
+      console.error("Gagal memuat kiriman");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPerumahanId]);
 
-  const handlePostSubmit = async (e) => {
-    e.preventDefault();
-    if (!newPostContent.trim()) {
-      toaster.create({
-        title: "Peringatan",
-        description: "Isi postingan tidak boleh kosong",
-        type: "warning",
-      });
-      return;
-    }
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
+  const handlePost = async () => {
+    if (!newPost.trim()) return;
     try {
-      const { error } = await supabase
-        .from('forum_posts')
-        .insert([{
-          author: profile?.nama || "Warga",
-          avatar: profile?.nama?.[0] || "U",
-          content: newPostContent,
-          category: newPostCategory,
-          perumahan_id: profile?.perumahan_id
-        }]);
-
-      if (error) throw error;
-      
-      setNewPostContent("");
-      toaster.create({
-        title: "Berhasil",
-        description: "Postingan berhasil diterbitkan",
-        type: "success",
-      });
+      const { error: pError } = await supabase.from('forum_posts').insert([{
+        content: newPost,
+        perumahan_id: selectedPerumahanId,
+        author_id: profile.id
+      }]);
+      if (pError) throw pError;
+      setNewPost("");
       fetchPosts();
     } catch {
-      toaster.create({
-        title: "Gagal mengirim postingan",
-        type: "error",
-      });
+      console.error("Gagal posting");
     }
   };
 
-  const filteredPosts = posts.filter(post => {
-    if (activeTab === "Semua") return true;
-    return post.category === activeTab;
-  });
-
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case "Pengumuman": return "blue";
-      case "Laporan": return "red";
-      case "Diskusi": return "green";
-      default: return "gray";
-    }
-  };
+  if (profile?.role === 'super_admin' && !selectedPerumahanId) {
+    return <SelectionRequired />;
+  }
 
   return (
-    <VStack spacing={6} align="stretch" maxWidth="4xl" mx="auto" width="full">
-      <Box>
-        <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Forum Warga</Heading>
-        <Text color="gray.500">Ruang diskusi, pengumuman, dan pelaporan antar warga perumahan.</Text>
-      </Box>
+    <div className="bg-transparent">
+      <div className="max-w-3xl mx-auto flex flex-col gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Forum Warga</h1>
+          <p className="text-slate-500 text-sm font-medium">Ruang diskusi dan berbagi informasi antar sesama warga kompleks.</p>
+        </div>
 
-      <Box bg="white" p={6} borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100">
-        <form onSubmit={handlePostSubmit}>
-          <Flex gap={4}>
-            <Avatar 
-              size="md" 
-              name={profile?.nama || "A"}
-              bg="blue.100" 
-              color="blue.700"
+        {/* Create Post Card */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+          <div className="flex gap-4">
+            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold">
+              {profile?.nama?.charAt(0)}
+            </div>
+            <textarea 
+              placeholder="Apa yang ingin Anda bagikan hari ini?" 
+              className="flex-1 text-sm font-medium focus:outline-none resize-none py-2 min-h-[100px]"
+              value={newPost}
+              onChange={(e) => setNewPost(e.target.value)}
             />
-            <VStack align="stretch" flex="1" spacing={3}>
-              <Textarea 
-                placeholder="Ada informasi apa yang ingin dibagikan ke warga?"
-                minHeight="100px"
-                resize="none"
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-              />
-              <Flex direction={{ base: "column", sm: "row" }} justify="space-between" align={{ base: "stretch", sm: "center" }} gap={3}>
-                <HStack spacing={2}>
-                  <Text fontSize="sm" color="gray.500" whiteSpace="nowrap">Kategori:</Text>
-                  <SelectRoot 
-                    value={[newPostCategory]} 
-                    onValueChange={(e) => setNewPostCategory(e.value[0])}
-                    width="140px"
-                  >
-                    <SelectTrigger height="9">
-                      <SelectValueText placeholder="Kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem item="Pengumuman" key="Pengumuman">Pengumuman</SelectItem>
-                      <SelectItem item="Diskusi" key="Diskusi">Diskusi</SelectItem>
-                      <SelectItem item="Laporan" key="Laporan">Laporan</SelectItem>
-                    </SelectContent>
-                  </SelectRoot>
-                </HStack>
-                <Button type="submit" colorScheme="blue" leftIcon={<Icon as={Send} boxSize={4} />}>
-                  Kirim Postingan
-                </Button>
-              </Flex>
-            </VStack>
-          </Flex>
-        </form>
-      </Box>
+          </div>
+          <div className="h-px bg-slate-100 w-full" />
+          <div className="flex justify-between items-center">
+            <div className="flex gap-2">
+              <button className="flex items-center gap-2 px-3 py-1.5 text-slate-500 font-bold text-xs hover:bg-slate-50 rounded-lg transition-all">
+                <ImageIcon className="w-4 h-4" /> Foto
+              </button>
+              <button className="flex items-center gap-2 px-3 py-1.5 text-slate-500 font-bold text-xs hover:bg-slate-50 rounded-lg transition-all">
+                <MessageCircle className="w-4 h-4" /> Polling
+              </button>
+            </div>
+            <button 
+              onClick={handlePost}
+              disabled={!newPost.trim()}
+              className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-md hover:opacity-90 disabled:opacity-50 transition-all"
+            >
+              Posting
+            </button>
+          </div>
+        </div>
 
-      <Tabs.Root value={activeTab} onValueChange={(e) => setActiveTab(e.value)} variant="enclosed" width="full">
-        <Tabs.List bg="gray.50" p={1} borderRadius="md" border="none">
-          <Tabs.Trigger value="Semua" flex="1">Semua</Tabs.Trigger>
-          <Tabs.Trigger value="Pengumuman" flex="1">Pengumuman</Tabs.Trigger>
-          <Tabs.Trigger value="Diskusi" flex="1">Diskusi</Tabs.Trigger>
-          <Tabs.Trigger value="Laporan" flex="1">Laporan</Tabs.Trigger>
-        </Tabs.List>
-        
-        <Box mt={6}>
+        {/* Posts List */}
+        <div className="flex flex-col gap-6">
           {loading ? (
-            <Center py={12} bg="white" borderRadius="lg" border="1px solid" borderColor="gray.100">
-              <VStack spacing={3}>
-                <Spinner size="xl" color="gray.300" />
-                <Text color="gray.500">Memuat postingan...</Text>
-              </VStack>
-            </Center>
-          ) : filteredPosts.length === 0 ? (
-            <Center py={12} bg="white" borderRadius="lg" border="1px solid" borderColor="gray.100">
-              <VStack spacing={3}>
-                <Icon as={MessageSquarePlus} boxSize={12} color="gray.300" />
-                <Text color="gray.500">Belum ada postingan di kategori ini.</Text>
-              </VStack>
-            </Center>
-          ) : (
-            <VStack spacing={4} align="stretch">
-              {filteredPosts.map((post) => (
-                <Box key={post.id} bg="white" borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100">
-                  <Box p={6}>
-                    <Flex justify="space-between" align="start" mb={4}>
-                      <HStack spacing={4}>
-                        <Avatar 
-                          size="md" 
-                          name={post.author}
-                          bg="gray.100" 
-                          color="gray.700"
-                        />
-                        <VStack align="start" spacing={0}>
-                          <Text fontWeight="semibold" color="gray.900">{post.author}</Text>
-                          <Text fontSize="xs" color="gray.500">
-                            {new Date(post.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
-                          </Text>
-                        </VStack>
-                      </HStack>
-                      <Badge 
-                        variant="outline" 
-                        colorScheme={getCategoryColor(post.category)}
-                        bg={`${getCategoryColor(post.category)}.50`}
-                      >
-                        {post.category}
-                      </Badge>
-                    </Flex>
-                    <Text color="gray.700" whiteSpace="pre-wrap" lineHeight="relaxed">
-                      {post.content}
-                    </Text>
-                  </Box>
-                  <Box py={3} px={6} bg="gray.50" borderTop="1px solid" borderColor="gray.100" borderBottomRadius="xl">
-                    <HStack spacing={6}>
-                      <Button variant="ghost" size="sm" color="gray.500" leftIcon={<Icon as={ThumbsUp} boxSize={4} />} _hover={{ color: "blue.600" }}>
-                        Suka
-                      </Button>
-                      <Button variant="ghost" size="sm" color="gray.500" leftIcon={<Icon as={MessageSquare} boxSize={4} />} _hover={{ color: "blue.600" }}>
-                        {post.replies_count > 0 ? `${post.replies_count} Balasan` : "Balas"}
-                      </Button>
-                    </HStack>
-                  </Box>
-                </Box>
-              ))}
-            </VStack>
-          )}
-        </Box>
-      </Tabs.Root>
-    </VStack>
+            Array(3).fill(0).map((_, i) => (
+              <div key={i} className="bg-white h-48 rounded-xl border border-slate-200 animate-pulse" />
+            ))
+          ) : posts.length === 0 ? (
+            <div className="bg-white p-12 text-center rounded-xl border border-slate-200 text-slate-400 font-medium">
+              Belum ada kiriman. Jadilah yang pertama!
+            </div>
+          ) : posts.map((post) => (
+            <div key={post.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-3 items-center">
+                    <div className="w-9 h-9 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 font-bold text-sm">
+                      {post.author?.nama?.charAt(0)}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold text-slate-900">{post.author?.nama}</p>
+                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[10px] font-bold uppercase">
+                          {post.author?.role}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        {new Date(post.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+                  <button className="text-slate-400 hover:text-slate-600">
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <p className="text-slate-700 text-sm font-medium leading-relaxed">
+                  {post.content}
+                </p>
+
+                <div className="h-px bg-slate-100 w-full" />
+
+                <div className="flex items-center gap-6">
+                  <button className="flex items-center gap-2 text-slate-500 font-bold text-xs hover:text-red-500 transition-all">
+                    <Heart className="w-4 h-4" /> 24
+                  </button>
+                  <button className="flex items-center gap-2 text-slate-500 font-bold text-xs hover:text-indigo-600 transition-all">
+                    <MessageCircle className="w-4 h-4" /> 12
+                  </button>
+                  <button className="ml-auto text-slate-500 hover:text-slate-900 transition-all">
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

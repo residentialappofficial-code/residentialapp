@@ -1,9 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Flex, Box, Spinner, Center, Text, VStack } from '@chakra-ui/react';
-import { Toaster } from '@/components/ui/chakra/toaster';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Header } from '@/components/layout/Header';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Lazy Loaded Pages
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
@@ -15,20 +14,64 @@ const Penggajian = lazy(() => import('@/pages/Penggajian'));
 const ForumWarga = lazy(() => import('@/pages/ForumWarga'));
 const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
+const ActivateAccount = lazy(() => import('@/pages/ActivateAccount'));
 const Profile = lazy(() => import('@/pages/Profile'));
 const ManageComplexes = lazy(() => import('@/pages/ManageComplexes'));
+const MyComplex = lazy(() => import('@/pages/MyComplex'));
+const MyBills = lazy(() => import('@/pages/MyBills'));
+const IuranConfig = lazy(() => import('@/pages/Billing/IuranConfig'));
+const ManageBills = lazy(() => import('@/pages/Billing/ManageBills'));
+const VerifyPayments = lazy(() => import('@/pages/Billing/VerifyPayments'));
+const Announcements = lazy(() => import('@/pages/Communication/ManageAnnouncements'));
+const Complaints = lazy(() => import('@/pages/Communication/Complaints'));
+const AssetTracking = lazy(() => import('@/pages/Assets/AssetTracking'));
 
-import { useAuth } from '@/contexts/AuthContext';
+// Guard: redirect ke /login kalau belum login & cek role
+function PrivateRoute({ children, allowedRoles = [] }) {
+  const { user, profile, loading, signOut } = useAuth();
+  
+  if (loading) return (
+    <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+      <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  );
 
-// Guard: redirect ke /login kalau belum login
-function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
-  if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
+
+  // Jika user login tapi profil tidak ditemukan di DB setelah loading selesai
+  if (!profile && !loading) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-slate-50 p-4 text-center">
+        <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl max-w-sm w-full">
+          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Profil Tidak Ditemukan</h2>
+          <p className="text-sm text-slate-500 mb-8 font-medium leading-relaxed">
+            Akun Anda terdaftar namun data profil Anda tidak ditemukan di sistem. 
+            Hal ini bisa terjadi jika pendaftaran belum selesai atau terjadi kesalahan teknis.
+          </p>
+          <button 
+            onClick={signOut}
+            className="w-full bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+          >
+            Keluar & Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (allowedRoles.length > 0 && profile && !allowedRoles.includes(profile.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 }
 
-// Guard: redirect ke /dashboard kalau sudah login
+
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -37,42 +80,27 @@ function PublicRoute({ children }) {
 }
 
 function AppLayout({ children }) {
-  const { profile } = useAuth();
   return (
-    <Flex height="100vh" width="100vw" overflow="hidden" bg="gray.50">
-      <AppSidebar role={profile?.role} />
-      <Flex direction="column" flex="1" minWidth="0" height="100vh" overflow="hidden">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+      <AppSidebar />
+      <div className="flex flex-col flex-1 min-w-0 h-screen overflow-hidden ml-64">
         <Header />
-        <Box 
-          as="main" 
-          flex="1" 
-          overflowY="auto" 
-          p={{ base: 4, md: 10 }}
-          css={{
-            '&::-webkit-scrollbar': { width: '4px' },
-            '&::-webkit-scrollbar-track': { background: 'transparent' },
-            '&::-webkit-scrollbar-thumb': { background: '#e5e7eb', borderRadius: '10px' },
-          }}
-        >
-          <Box maxWidth="1600px" marginX="auto" className="slide-up-fade-in">
+        <main className="flex-1 overflow-y-auto pt-20 p-4">
+          <div className="w-full">
             {children}
-          </Box>
-        </Box>
-      </Flex>
-    </Flex>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 }
 
 function PageLoader() {
   return (
-    <Center height="60vh" width="full">
-      <VStack spacing={4}>
-        <Spinner size="lg" color="emerald.500" thickness="3px" />
-        <Text fontSize="xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="widest">
-          Loading Content...
-        </Text>
-      </VStack>
-    </Center>
+    <div className="h-full w-full flex flex-col items-center justify-center py-20 gap-4">
+      <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Loading...</p>
+    </div>
   );
 }
 
@@ -81,16 +109,12 @@ function App() {
 
   if (loading) {
     return (
-      <Center height="100vh" width="100vw" bg="#f9fafb">
-        <VStack spacing={6}>
-          <Box p={6} borderRadius="24px" bg="emerald.50" boxShadow="0 10px 15px -3px rgba(16, 185, 129, 0.1)">
-            <Spinner size="xl" color="emerald.500" thickness="4px" />
-          </Box>
-          <Text fontWeight="800" color="emerald.600" textTransform="uppercase" letterSpacing="widest" fontSize="xs">
-            Preparing your experience...
-          </Text>
-        </VStack>
-      </Center>
+      <div className="h-screen w-full flex items-center justify-center bg-slate-50">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="font-bold text-indigo-600 uppercase tracking-widest text-xs">Preparing Experience...</p>
+        </div>
+      </div>
     );
   }
 
@@ -98,29 +122,31 @@ function App() {
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Public routes */}
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/activate" element={<ActivateAccount />} />
 
-          {/* Redirect root ke dashboard */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          {/* Protected routes */}
           <Route path="/dashboard" element={<PrivateRoute><AppLayout><Dashboard /></AppLayout></PrivateRoute>} />
-          <Route path="/warga" element={<PrivateRoute><AppLayout><DataWarga /></AppLayout></PrivateRoute>} />
-          <Route path="/pengurus" element={<PrivateRoute><AppLayout><DataPengurus /></AppLayout></PrivateRoute>} />
-          <Route path="/iuran" element={<PrivateRoute><AppLayout><PembayaranIuran /></AppLayout></PrivateRoute>} />
-          <Route path="/kas" element={<PrivateRoute><AppLayout><ArusKas /></AppLayout></PrivateRoute>} />
-          <Route path="/penggajian" element={<PrivateRoute><AppLayout><Penggajian /></AppLayout></PrivateRoute>} />
+          <Route path="/warga" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><DataWarga /></AppLayout></PrivateRoute>} />
+          <Route path="/pengurus" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><DataPengurus /></AppLayout></PrivateRoute>} />
+          <Route path="/iuran" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><PembayaranIuran /></AppLayout></PrivateRoute>} />
+          <Route path="/kas" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><ArusKas /></AppLayout></PrivateRoute>} />
+          <Route path="/penggajian" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><Penggajian /></AppLayout></PrivateRoute>} />
           <Route path="/forum" element={<PrivateRoute><AppLayout><ForumWarga /></AppLayout></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><AppLayout><Profile /></AppLayout></PrivateRoute>} />
-          <Route path="/manage-complexes" element={<PrivateRoute><AppLayout><ManageComplexes /></AppLayout></PrivateRoute>} />
+          <Route path="/manage-complexes" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><ManageComplexes /></AppLayout></PrivateRoute>} />
+          <Route path="/my-complex" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><MyComplex /></AppLayout></PrivateRoute>} />
+          <Route path="/my-bills" element={<PrivateRoute allowedRoles={['resident']}><AppLayout><MyBills /></AppLayout></PrivateRoute>} />
+          <Route path="/iuran-config" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><IuranConfig /></AppLayout></PrivateRoute>} />
+          <Route path="/manage-bills" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><ManageBills /></AppLayout></PrivateRoute>} />
+          <Route path="/verify-payments" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><VerifyPayments /></AppLayout></PrivateRoute>} />
+          <Route path="/announcements" element={<PrivateRoute><AppLayout><Announcements /></AppLayout></PrivateRoute>} />
+          <Route path="/complaints" element={<PrivateRoute><AppLayout><Complaints /></AppLayout></PrivateRoute>} />
+          <Route path="/assets" element={<PrivateRoute><AppLayout><AssetTracking /></AppLayout></PrivateRoute>} />
 
-          {/* 404 fallback */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>
-      <Toaster />
     </BrowserRouter>
   );
 }

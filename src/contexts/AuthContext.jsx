@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
 const AuthContext = createContext({});
@@ -10,121 +10,143 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [selectedPerumahanId, setSelectedPerumahanId] = useState(null);
   const [perumahanList, setPerumahanList] = useState([]);
+  const lastFetchedUserId = useRef(null);
+
+  const fetchAllPerumahan = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('perumahan').select('*').order('nama');
+      if (!error) setPerumahanList(data || []);
+    } catch (err) {
+      console.error("Error fetching all perumahan:", err);
+    }
+  }, []);
+
+  const fetchProfile = useCallback(async (userId) => {
+    // Hindari fetch berulang untuk user yang sama dalam waktu singkat
+    if (lastFetchedUserId.current === userId) {
+      setLoading(false);
+      return;
+    }
+    lastFetchedUserId.current = userId;
+
+    try {
+      console.time("fetchProfile");
+      console.log("Fetching profile for:", userId);
+      
+      // Gunakan Promise.race untuk memberi batas waktu 5 detik
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 5000)
+      );
+
+      const fetchPromise = Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).maybeSingle(),
+        supabase.from('warga').select('*').eq('user_id', userId).maybeSingle()
+      ]);
+
+      try {
+        const [profResult, wargaResult] = await Promise.race([fetchPromise, timeoutPromise]);
+        
+        const profData = profResult.data;
+        const wargaData = wargaResult.data;
+
+        if (profData) {
+          console.log("   - Profile found in 'profiles':", profData.role);
+          setProfile(profData);
+          if (profData.role === 'super_admin') fetchAllPerumahan();
+          else if (profData.perumahan_id) setSelectedPerumahanId(profData.perumahan_id);
+        } else if (wargaData) {
+          console.log("   - Profile found in 'warga'");
+          const formattedProfile = { ...wargaData, role: 'resident' };
+          setProfile(formattedProfile);
+          if (wargaData.perumahan_id) setSelectedPerumahanId(wargaData.perumahan_id);
+        } else {
+          console.error("   - No profile found in any table for user:", userId);
+          // VOID the Fast Track profile because it doesn't exist in DB
+          setProfile(null);
+          lastFetchedUserId.current = userId; 
+        }
+
+        if (profResult.error) console.warn("   - 'profiles' error:", profResult.error.message);
+        if (wargaResult.error) console.warn("   - 'warga' error:", wargaResult.error.message);
+
+      } catch (timeoutErr) {
+        if (timeoutErr.message === "Timeout") {
+          console.error("Profile fetch timed out after 5s.");
+        } else {
+          throw timeoutErr;
+        }
+        setProfile(null);
+      }
+
+    } catch (err) {
+      console.error("Profile fetch error:", err);
+      setProfile({ role: 'guest' });
+    } finally {
+      console.timeEnd("fetchProfile");
+      setLoading(false);
+    }
+  }, [fetchAllPerumahan]);
 
   useEffect(() => {
     let mounted = true;
 
-    // Emergency fallback... (keep existing)
-    const emergencyTimer = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("Auth check timed out after 10 seconds! Forcing loading to false.");
-        setLoading(false);
-      }
-    }, 10000);
-
-    const fetchAllPerumahan = async () => {
-      try {
-        const { data, error } = await supabase.from('perumahan').select('*').order('nama');
-        if (!error && mounted) setPerumahanList(data || []);
-      } catch (err) {
-        console.error("Error fetching all perumahan:", err);
-      }
-    };
-
-    const fetchProfile = async (userId) => {
-      try {
-        console.log("Fetching profile for:", userId);
-        const { data, error } = await supabase
-          .from('warga')
-          .select('*, perumahan(nama)')
-          .eq('user_id', userId)
-          .single();
-        
-        if (!error && data) {
-          console.log("Profile loaded:", data.role);
-          if (mounted) {
-            setProfile(data);
-            // Inisialisasi selectedPerumahanId dari profile jika belum ada
-            setSelectedPerumahanId(prev => prev || data.perumahan_id);
-            
-            // Jika Super Admin, ambil semua daftar komplek
-            if (data.role === 'super_admin') {
-              fetchAllPerumahan();
-            }
-          }
-        } else if (error) {
-          console.error("Profile fetch error:", error.message);
-          if (mounted) setProfile(null);
-        }
-      } catch (err) {
-        console.error("Unexpected profile fetch error:", err);
-        if (mounted) setProfile(null);
-      }
-    };
-
-    const setData = async () => {
-      try {
-        console.log("Checking session...");
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
-        if (mounted) setUser(session?.user || null);
-        
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          if (mounted) {
-            setProfile(null);
-            setSelectedPerumahanId(null);
-          }
-        }
-      } catch (err) {
-        console.error("Auth init error:", err);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-          clearTimeout(emergencyTimer);
-        }
-      }
-    };
-
-    setData();
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Gunakan onAuthStateChange untuk inisialisasi DAN perubahan state
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      console.log("Auth state changed:", event);
-      try {
-        setUser(session?.user || null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setSelectedPerumahanId(null);
+      
+      console.log(`Auth Event: ${event}`);
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+
+      if (currentUser) {
+        // FAST TRACK: Gunakan metadata dari session user dulu agar UI tidak hang
+        console.log("   - Fast Track: Using user metadata");
+        setProfile({
+          role: currentUser.user_metadata?.role || 'resident',
+          nama: currentUser.user_metadata?.nama || currentUser.email,
+          perumahan_id: currentUser.user_metadata?.perumahan_id
+        });
+
+        if (currentUser.user_metadata?.perumahan_id) {
+          setSelectedPerumahanId(currentUser.user_metadata.perumahan_id);
         }
-      } catch (err) {
-        console.error("Auth state change error:", err);
+        
+        // Langsung matikan loading agar UI muncul
+        setLoading(false);
+
+        // Fetch profil lengkap dari DB di background untuk sinkronisasi data terbaru
+        fetchProfile(currentUser.id);
+      } else {
+        setProfile(null);
+        setSelectedPerumahanId(null);
+        setLoading(false);
       }
     });
 
     return () => {
       mounted = false;
-      clearTimeout(emergencyTimer);
-      listener?.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchProfile]);
 
   const value = {
     user,
     profile,
+    role: profile?.role,
     loading,
     selectedPerumahanId,
     perumahanList,
     switchPerumahan: (id) => setSelectedPerumahanId(id),
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
     signUp: (email, password, metadata) => supabase.auth.signUp({ email, password, options: { data: metadata } }),
-    signOut: () => {
+    signOut: async () => {
+      setLoading(true);
+      lastFetchedUserId.current = null;
       setSelectedPerumahanId(null);
-      return supabase.auth.signOut();
+      setProfile(null);
+      const { error } = await supabase.auth.signOut();
+      setLoading(false);
+      return { error };
     },
     updateProfile: async (newData) => {
       if (!user) return { error: "No user logged in" };
@@ -134,13 +156,7 @@ export const AuthProvider = ({ children }) => {
         .eq('user_id', user.id);
       
       if (!error) {
-        // Refresh profil
-        const { data } = await supabase
-          .from('warga')
-          .select('*, perumahan(nama)')
-          .eq('user_id', user.id)
-          .single();
-        setProfile(data);
+        await fetchProfile(user.id);
       }
       return { error };
     },
@@ -153,6 +169,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export const useAuth = () => useContext(AuthContext);

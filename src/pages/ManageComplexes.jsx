@@ -1,177 +1,189 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { Plus, Building2, Calendar, ShieldCheck, Users } from "lucide-react";
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  Button,
-  VStack,
-  HStack,
-  Table,
-  Badge,
-  Icon,
-  Spinner,
-  Center,
-  SimpleGrid,
-} from "@chakra-ui/react";
-import { toaster } from "@/components/ui/chakra/toaster";
+import { Plus, Building2, ShieldCheck, Users, Search, MoreHorizontal, Filter, MapPin, Layers, CheckCircle, Ban } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD } from "@/components/ui";
 
 export default function ManageComplexes() {
-  const [perumahan, setPerumahan] = useState([]);
+  const { switchPerumahan, selectedPerumahanId } = useAuth();
+  const [complexes, setComplexes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    fetchPerumahan();
-  }, []);
-
-  const fetchPerumahan = async () => {
+  const fetchComplexes = useCallback(async () => {
     try {
       setLoading(true);
-      // Mengambil data perumahan beserta jumlah warga
       const { data, error } = await supabase
         .from('perumahan')
         .select(`
           *,
-          warga:warga(count)
-        `)
-        .order('nama');
+          warga_count:warga(count)
+        `);
       
       if (error) throw error;
-      setPerumahan(data || []);
+      setComplexes(data || []);
     } catch (error) {
-      toaster.create({
-        title: "Gagal memuat data",
-        description: error.message,
-        type: "error",
-      });
+      console.error("Gagal memuat data", error.message);
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    fetchComplexes();
+  }, [fetchComplexes]);
+
+  const toggleSuspend = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    try {
+      const { error } = await supabase
+        .from('perumahan')
+        .update({ status: newStatus })
+        .eq('id', id);
+      
+      if (error) throw error;
+      fetchComplexes();
+    } catch (error) {
+      alert("Gagal mengubah status: " + error.message);
+    }
   };
 
+  const filteredData = complexes.filter(item => 
+    item.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.alamat?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <VStack spacing={8} align="stretch" width="full">
-      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
-        <Box>
-          <Heading size="lg" fontWeight="900" letterSpacing="tight">Manajemen Komplek</Heading>
-          <Text color="gray.500">Pantau dan kelola semua perumahan yang terdaftar di platform.</Text>
-        </Box>
-        <Button 
-          colorScheme="emerald" 
-          px={6} 
-          borderRadius="xl"
-          boxShadow="0 4px 12px rgba(16, 185, 129, 0.2)"
-          leftIcon={<Icon as={Plus} />}
-        >
-          Tambah Komplek Baru
-        </Button>
-      </Flex>
+    <div className="bg-transparent">
+      <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Kelola Komplek</h1>
+            <p className="text-slate-500 text-sm font-medium">Manajemen seluruh perumahan dan kontrol akses sistem.</p>
+          </div>
+          <Button variant="primary" icon={Plus}>Tambah Komplek Baru</Button>
+        </div>
 
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
-        <Box bg="white" p={6} borderRadius="2xl" shadow="sm" border="1px solid" borderColor="gray.100">
-          <HStack spacing={4}>
-            <Center boxSize={12} bg="emerald.50" color="emerald.600" borderRadius="xl">
-              <Icon as={Building2} boxSize={6} />
-            </Center>
-            <Box>
-              <Text fontSize="xs" fontWeight="800" color="gray.400" textTransform="uppercase">Total Komplek</Text>
-              <Text fontSize="2xl" fontWeight="900">{perumahan.length}</Text>
-            </Box>
-          </HStack>
-        </Box>
-        
-        <Box bg="white" p={6} borderRadius="2xl" shadow="sm" border="1px solid" borderColor="gray.100">
-          <HStack spacing={4}>
-            <Center boxSize={12} bg="blue.50" color="blue.600" borderRadius="xl">
-              <Icon as={Users} boxSize={6} />
-            </Center>
-            <Box>
-              <Text fontSize="xs" fontWeight="800" color="gray.400" textTransform="uppercase">Total Pengguna</Text>
-              <Text fontSize="2xl" fontWeight="900">
-                {perumahan.reduce((sum, p) => sum + (p.warga?.[0]?.count || 0), 0)}
-              </Text>
-            </Box>
-          </HStack>
-        </Box>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+              <Building2 className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">{complexes.length}</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Perumahan</p>
+            </div>
+          </Card>
+          <Card className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">
+                {complexes.filter(c => c.status !== 'suspended').length}
+              </p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Komplek Aktif</p>
+            </div>
+          </Card>
+          <Card className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-600">
+              <Ban className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">
+                {complexes.filter(c => c.status === 'suspended').length}
+              </p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Komplek Suspended</p>
+            </div>
+          </Card>
+        </div>
 
-        <Box bg="white" p={6} borderRadius="2xl" shadow="sm" border="1px solid" borderColor="gray.100">
-          <HStack spacing={4}>
-            <Center boxSize={12} bg="orange.50" color="orange.600" borderRadius="xl">
-              <Icon as={ShieldCheck} boxSize={6} />
-            </Center>
-            <Box>
-              <Text fontSize="xs" fontWeight="800" color="gray.400" textTransform="uppercase">Langganan Aktif</Text>
-              <Text fontSize="2xl" fontWeight="900">
-                {perumahan.filter(p => p.subscription_status === 'active').length}
-              </Text>
-            </Box>
-          </HStack>
-        </Box>
-      </SimpleGrid>
+        {/* Table Card */}
+        <Card noPadding>
+          <CardHeader 
+            title="Daftar Perumahan"
+            action={
+              <Input 
+                placeholder="Cari perumahan..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                icon={Search}
+                className="w-80"
+              />
+            }
+          />
 
-      <Box bg="white" borderRadius="2xl" shadow="sm" border="1px solid" borderColor="gray.100" overflow="hidden">
-        <Table.Root variant="simple">
-          <Table.Header bg="gray.50">
-            <Table.Row>
-              <Table.ColumnHeader py={4}>Nama Perumahan</Table.ColumnHeader>
-              <Table.ColumnHeader>Alamat</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="center">Jumlah Warga</Table.ColumnHeader>
-              <Table.ColumnHeader>Status Langganan</Table.ColumnHeader>
-              <Table.ColumnHeader>Masa Berlaku</Table.ColumnHeader>
-              <Table.ColumnHeader textAlign="right">Aksi</Table.ColumnHeader>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {loading ? (
-              <Table.Row>
-                <Table.Cell colSpan={6} py={20}>
-                  <Center>
-                    <VStack>
-                      <Spinner color="emerald.500" size="xl" />
-                      <Text color="gray.500" fontSize="sm" fontWeight="600">Menarik data komplek...</Text>
-                    </VStack>
-                  </Center>
-                </Table.Cell>
-              </Table.Row>
-            ) : perumahan.length === 0 ? (
-              <Table.Row>
-                <Table.Cell colSpan={6} textAlign="center" py={10}>Belum ada perumahan terdaftar.</Table.Cell>
-              </Table.Row>
-            ) : perumahan.map((p) => (
-              <Table.Row key={p.id} _hover={{ bg: "gray.50/50" }} transition="all 0.2s">
-                <Table.Cell fontWeight="800" color="gray.900" py={5}>{p.nama}</Table.Cell>
-                <Table.Cell color="gray.500" fontSize="sm" maxW="200px">{p.alamat || "-"}</Table.Cell>
-                <Table.Cell textAlign="center">
-                  <Badge variant="subtle" colorScheme="blue" borderRadius="md">
-                    {p.warga?.[0]?.count || 0} Warga
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge 
-                    variant="solid" 
-                    bg={p.subscription_status === 'active' ? 'emerald.500' : 'red.500'}
-                    borderRadius="full"
-                    px={3}
-                  >
-                    {p.subscription_status?.toUpperCase() || 'INACTIVE'}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell color="gray.600" fontSize="sm">
-                  <HStack>
-                    <Icon as={Calendar} boxSize={3} />
-                    <Text>{p.expiry_date ? new Date(p.expiry_date).toLocaleDateString('id-ID') : "-"}</Text>
-                  </HStack>
-                </Table.Cell>
-                <Table.Cell textAlign="right">
-                  <Button variant="ghost" size="sm" fontWeight="800" color="emerald.600">Kelola</Button>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
-      </Box>
-    </VStack>
+          <Table>
+            <THead>
+              <TR isHeader>
+                <TH>Nama Perumahan</TH>
+                <TH>Lokasi</TH>
+                <TH>Unit & Warga</TH>
+                <TH>Status</TH>
+                <TH textAlign="right">Aksi Manajemen</TH>
+              </TR>
+            </THead>
+            <TBody>
+              {loading ? (
+                Array(3).fill(0).map((_, i) => (
+                  <TR key={i}><TD colSpan={5}><div className="h-6 bg-slate-100 rounded animate-pulse"></div></TD></TR>
+                ))
+              ) : filteredData.map((item) => (
+                <TR key={item.id} className={selectedPerumahanId === item.id ? 'bg-indigo-50/30' : ''}>
+                  <TD>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${item.status === 'suspended' ? 'bg-slate-100 text-slate-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <span className={`text-sm font-bold ${item.status === 'suspended' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
+                        {item.nama}
+                      </span>
+                    </div>
+                  </TD>
+                  <TD>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-xs text-slate-600 font-semibold">{item.alamat || "Indonesia"}</span>
+                    </div>
+                  </TD>
+                  <TD>
+                    <div className="flex flex-col gap-1">
+                      <Badge variant="slate">{item.warga_count?.[0]?.count || 0} Warga</Badge>
+                    </div>
+                  </TD>
+                  <TD>
+                    <Badge variant={item.status === 'suspended' ? 'red' : 'green'}>
+                      {item.status || 'active'}
+                    </Badge>
+                  </TD>
+                  <TD textAlign="right">
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        size="xs" 
+                        variant={selectedPerumahanId === item.id ? 'dark' : 'outline'}
+                        onClick={() => switchPerumahan(item.id)}
+                        disabled={item.status === 'suspended'}
+                      >
+                        {selectedPerumahanId === item.id ? 'Selected' : 'Select'}
+                      </Button>
+                      <Button 
+                        size="xs" 
+                        variant={item.status === 'suspended' ? 'success' : 'danger'}
+                        onClick={() => toggleSuspend(item.id, item.status)}
+                        icon={item.status === 'suspended' ? CheckCircle : Ban}
+                      >
+                        {item.status === 'suspended' ? 'Activate' : 'Suspend'}
+                      </Button>
+                    </div>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </Card>
+      </div>
+    </div>
   );
 }

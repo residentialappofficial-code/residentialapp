@@ -1,322 +1,166 @@
-import { useState, useEffect, useMemo } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  Button,
-  VStack,
-  HStack,
-  Input,
-  SimpleGrid,
-  Table,
-  Badge,
-  Icon,
-  Spinner,
-  Center,
-  Stack,
-} from "@chakra-ui/react";
-import {
-  DialogRoot,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-  DialogActionTrigger,
-} from "@/components/ui/chakra/dialog";
-import { Field } from "@/components/ui/chakra/field";
-import { toaster } from "@/components/ui/chakra/toaster";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Edit, Trash2, Search, MoreVertical, Briefcase, DollarSign, Filter, CreditCard, Banknote, History } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+import { SelectionRequired } from "@/components/ui/SelectionRequired";
+
 export default function Penggajian() {
-  const { profile } = useAuth();
+  const { selectedPerumahanId, profile } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  
-  const [formData, setFormData] = useState({
-    nama_pegawai: "",
-    jabatan: "",
-    gaji_pokok: 0,
-    tunjangan: 0,
-    potongan: 0,
-  });
+  const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchPayroll = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: payroll, error } = await supabase
+      if (!selectedPerumahanId) return;
+      const { data: payroll } = await supabase
         .from('penggajian')
         .select('*')
-        .order('created_at', { ascending: true });
+        .eq('perumahan_id', selectedPerumahanId)
+        .order('tanggal', { ascending: false });
       
-      if (error) throw error;
       setData(payroll || []);
     } catch {
-      toaster.create({
-        title: "Gagal mengambil data gaji",
-        type: "error",
-      });
+      console.error("Gagal memuat data gaji");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPerumahanId]);
 
-  const handleOpenDialog = (item = null) => {
-    if (item) {
-      setEditingId(item.id);
-      setFormData({
-        nama_pegawai: item.nama_pegawai,
-        jabatan: item.jabatan,
-        gaji_pokok: item.gaji_pokok,
-        tunjangan: item.tunjangan,
-        potongan: item.potongan,
-      });
-    } else {
-      setEditingId(null);
-      setFormData({
-        nama_pegawai: "",
-        jabatan: "",
-        gaji_pokok: 0,
-        tunjangan: 0,
-        potongan: 0,
-      });
-    }
-    setIsDialogOpen(true);
-  };
+  useEffect(() => {
+    fetchPayroll();
+  }, [fetchPayroll]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const gaji_bersih = Number(formData.gaji_pokok) + Number(formData.tunjangan) - Number(formData.potongan);
-      const saveObj = { 
-        ...formData, 
-        gaji_pokok: Number(formData.gaji_pokok),
-        tunjangan: Number(formData.tunjangan),
-        potongan: Number(formData.potongan),
-        gaji_bersih 
-      };
+  const filteredData = data.filter(item => 
+    item.nama_staf?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.jabatan?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-      if (editingId) {
-        const { error } = await supabase
-          .from('penggajian')
-          .update(saveObj)
-          .eq('id', editingId);
-        if (error) throw error;
-        toaster.create({
-          title: "Berhasil",
-          description: "Data penggajian diperbarui",
-          type: "success",
-        });
-      } else {
-        const { error } = await supabase
-          .from('penggajian')
-          .insert([{ 
-            ...saveObj, 
-            perumahan_id: profile?.perumahan_id 
-          }]);
-        if (error) throw error;
-        toaster.create({
-          title: "Berhasil",
-          description: "Pegawai baru ditambahkan",
-          type: "success",
-        });
-      }
-      setIsDialogOpen(false);
-      fetchData();
-    } catch (error) {
-      toaster.create({
-        title: "Terjadi kesalahan",
-        description: error.message,
-        type: "error",
-      });
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm("Hapus data ini?")) return;
-    try {
-      const { error } = await supabase
-        .from('penggajian')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-      toaster.create({
-        title: "Berhasil",
-        description: "Data dihapus",
-        type: "success",
-      });
-      fetchData();
-    } catch {
-      toaster.create({
-        title: "Gagal menghapus",
-        type: "error",
-      });
-    }
-  };
-
-  const totalGajiBulanIni = useMemo(() => {
-    return data.reduce((acc, curr) => acc + Number(curr.gaji_bersih), 0);
-  }, [data]);
+  if (profile?.role === 'super_admin' && !selectedPerumahanId) {
+    return <SelectionRequired />;
+  }
 
   return (
-    <VStack spacing={8} align="stretch" width="full">
-      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
-        <Box>
-          <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Penggajian Staf</Heading>
-          <Text color="gray.500">Rekap dan manajemen gaji satpam, petugas kebersihan, dll.</Text>
-        </Box>
-        
-        <DialogRoot 
-          open={isDialogOpen} 
-          onOpenChange={(e) => setIsDialogOpen(e.open)}
-          placement="center"
-        >
-          <Button colorScheme="blue" leftIcon={<Icon as={Plus} boxSize={4} />} onClick={() => handleOpenDialog()}>
-            Tambah Pegawai
-          </Button>
-          
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Edit Data Penggajian" : "Tambah Pegawai"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <DialogBody pb={6}>
-                <Stack spacing={4}>
-                  <Field label="Nama Pegawai" required>
-                    <Input 
-                      value={formData.nama_pegawai}
-                      onChange={(e) => setFormData({...formData, nama_pegawai: e.target.value})}
-                      placeholder="Masukkan nama lengkap"
-                    />
-                  </Field>
-                  
-                  <Field label="Posisi / Jabatan" required>
-                    <Input 
-                      placeholder="Contoh: Satpam"
-                      value={formData.jabatan}
-                      onChange={(e) => setFormData({...formData, jabatan: e.target.value})}
-                    />
-                  </Field>
-                  
-                  <Field label="Gaji Pokok" required>
-                    <Input 
-                      type="number"
-                      value={formData.gaji_pokok || ""}
-                      onChange={(e) => setFormData({...formData, gaji_pokok: e.target.value})}
-                      placeholder="0"
-                    />
-                  </Field>
-                  
-                  <HStack spacing={4}>
-                    <Field label="Tunjangan">
-                      <Input 
-                        type="number"
-                        value={formData.tunjangan || ""}
-                        onChange={(e) => setFormData({...formData, tunjangan: e.target.value})}
-                        placeholder="0"
-                      />
-                    </Field>
-                    <Field label="Potongan">
-                      <Input 
-                        type="number"
-                        value={formData.potongan || ""}
-                        onChange={(e) => setFormData({...formData, potongan: e.target.value})}
-                        placeholder="0"
-                      />
-                    </Field>
-                  </HStack>
-                </Stack>
-              </DialogBody>
-              
-              <DialogFooter>
-                <DialogActionTrigger asChild>
-                  <Button variant="ghost">Batal</Button>
-                </DialogActionTrigger>
-                <Button type="submit" colorScheme="blue">Simpan Data</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </DialogRoot>
-      </Flex>
+    <div className="bg-transparent">
+      <div className="flex flex-col gap-4">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Penggajian Staf</h1>
+            <p className="text-slate-500 text-sm font-medium">Kelola slip gaji dan riwayat pembayaran untuk staf perumahan.</p>
+          </div>
+          <div className="flex gap-3">
+            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg font-semibold text-sm hover:bg-slate-50 transition-all shadow-sm">
+              <History className="w-4 h-4" /> Riwayat
+            </button>
+            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:opacity-90 transition-all shadow-md">
+              <Plus className="w-4 h-4" /> Input Gaji
+            </button>
+          </div>
+        </div>
 
-      <Box p={6} bg="white" borderRadius="xl" shadow="sm" border="1px solid" borderColor="gray.100" borderLeft="4px solid" borderLeftColor="red.500">
-        <VStack align="start" spacing={1}>
-          <Text fontSize="sm" fontWeight="medium" color="gray.600">Total Beban Gaji Bulan Ini</Text>
-          <Text fontSize="3xl" fontWeight="bold" color="red.600">
-            Rp {totalGajiBulanIni.toLocaleString('id-ID')}
-          </Text>
-        </VStack>
-      </Box>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600">
+              <Briefcase className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">8</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Staf Aktif</p>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600">
+              <Banknote className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">Rp 24.5M</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Pengeluaran Gaji</p>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+            <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center text-purple-600">
+              <CreditCard className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">Lunas</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status Bulan Ini</p>
+            </div>
+          </div>
+        </div>
 
-      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
-        <Box overflowX="auto">
-          <Table.Root variant="simple">
-            <Table.Header bg="gray.50">
-              <Table.Row>
-                <Table.ColumnHeader>Nama Pegawai</Table.ColumnHeader>
-                <Table.ColumnHeader>Jabatan</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Gaji Pokok</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Tunjangan</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right" color="red.600">Potongan</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right" fontWeight="bold" bg="gray.50">Gaji Bersih</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Aksi</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {loading ? (
-                <Table.Row>
-                  <Table.Cell colSpan={7} py={10}>
-                    <Center>
-                      <HStack spacing={3} color="gray.500">
-                        <Spinner size="sm" />
-                        <Text>Memuat data...</Text>
-                      </HStack>
-                    </Center>
-                  </Table.Cell>
-                </Table.Row>
-              ) : data.length === 0 ? (
-                <Table.Row>
-                  <Table.Cell colSpan={7} textAlign="center" py={10} color="gray.500">
-                    Tidak ada data pegawai.
-                  </Table.Cell>
-                </Table.Row>
-              ) : (
-                data.map((item) => (
-                  <Table.Row key={item.id}>
-                    <Table.Cell fontWeight="semibold" color="gray.900">{item.nama_pegawai}</Table.Cell>
-                    <Table.Cell color="gray.600">{item.jabatan}</Table.Cell>
-                    <Table.Cell textAlign="right">Rp {item.gaji_pokok.toLocaleString('id-ID')}</Table.Cell>
-                    <Table.Cell textAlign="right">Rp {item.tunjangan.toLocaleString('id-ID')}</Table.Cell>
-                    <Table.Cell textAlign="right" color="red.500">Rp {item.potongan.toLocaleString('id-ID')}</Table.Cell>
-                    <Table.Cell textAlign="right" fontWeight="bold" color="gray.900" bg="gray.50/30">
-                      Rp {item.gaji_bersih.toLocaleString('id-ID')}
-                    </Table.Cell>
-                    <Table.Cell textAlign="right">
-                      <HStack justify="end" spacing={2}>
-                        <Button variant="ghost" size="sm" p={1} onClick={() => handleOpenDialog(item)}>
-                          <Icon as={Edit} boxSize={4} color="blue.600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" p={1} onClick={() => handleDelete(item.id)}>
-                          <Icon as={Trash2} boxSize={4} color="red.600" />
-                        </Button>
-                      </HStack>
-                    </Table.Cell>
-                  </Table.Row>
-                ))
-              )}
-            </Table.Body>
-          </Table.Root>
-        </Box>
-      </Box>
-    </VStack>
+        {/* Main Content Card */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="relative flex-1 md:w-80">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Cari nama staf..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:border-indigo-600 transition-all"
+              />
+            </div>
+            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all">
+              <Filter className="w-4 h-4" /> Filter
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nama Staf</th>
+                  <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jabatan</th>
+                  <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bulan</th>
+                  <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Jumlah Gaji</th>
+                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array(5).fill(0).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={5} className="px-8 py-6"><div className="h-5 bg-slate-100 rounded"></div></td>
+                    </tr>
+                  ))
+                ) : filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-8 py-20 text-center text-slate-400 font-medium">Tidak ada data penggajian.</td>
+                  </tr>
+                ) : filteredData.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50 border-b border-slate-50 transition-all">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-8 h-8 bg-slate-800 rounded flex items-center justify-center text-white text-[10px] font-bold">
+                          {item.nama_staf?.charAt(0)}
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">{item.nama_staf}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-5 text-xs font-bold text-slate-600">{item.jabatan}</td>
+                    <td className="px-4 py-5 text-xs font-bold text-slate-600">April 2026</td>
+                    <td className="px-4 py-5 text-sm font-bold text-slate-900 text-right">
+                      Rp {item.jumlah?.toLocaleString()}
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <button className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,316 +1,154 @@
-import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import {
-  Box,
-  Flex,
-  Heading,
-  Text,
-  Button,
-  VStack,
-  HStack,
-  Input,
-  Table,
-  Badge,
-  Icon,
-  Spinner,
-  Center,
-  Stack,
-} from "@chakra-ui/react";
-import {
-  DialogRoot,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogBody,
-  DialogFooter,
-  DialogActionTrigger,
-} from "@/components/ui/chakra/dialog";
-import {
-  SelectRoot,
-  SelectTrigger,
-  SelectValueText,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/chakra/select";
-import { Field } from "@/components/ui/chakra/field";
-import { toaster } from "@/components/ui/chakra/toaster";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Edit, Trash2, Search, Shield, Calendar, UserCheck } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+const StatCard = (props) => {
+  const { title, value, icon: IconComp, color } = props;
+  const colorMap = {
+    indigo: 'bg-indigo-50 text-indigo-600',
+    green: 'bg-green-50 text-green-600',
+    blue: 'bg-blue-50 text-blue-600'
+  };
+  
+  return (
+    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex items-center gap-4">
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${colorMap[color]}`}>
+        <IconComp className="w-6 h-6" />
+      </div>
+      <div>
+        <p className="text-xl font-bold text-slate-900">{value}</p>
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{title}</p>
+      </div>
+    </div>
+  );
+};
+
+import { SelectionRequired } from "@/components/ui/SelectionRequired";
+
 export default function DataPengurus() {
-  const { profile } = useAuth();
+  const { profile, selectedPerumahanId } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   
-  const [formData, setFormData] = useState({
-    nama: "",
-    jabatan: "Anggota",
-    no_hp: "",
-    periode: "2025-2027"
-  });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const { data: staff, error } = await supabase
+      if (!selectedPerumahanId) return;
+
+      const { data: staff } = await supabase
         .from('pengurus')
         .select('*')
+        .eq('perumahan_id', selectedPerumahanId)
         .order('created_at', { ascending: true })
         .limit(100);
       
-      if (error) throw error;
       setData(staff || []);
     } catch {
-      toaster.create({
-        title: "Gagal mengambil data pengurus",
-        type: "error",
-      });
+      console.error("Error fetching staff data");
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPerumahanId]);
 
-  const handleOpenDialog = (item = null) => {
-    if (item) {
-      setEditingId(item.id);
-      setFormData({
-        nama: item.nama,
-        jabatan: item.jabatan,
-        no_hp: item.no_hp || "",
-        periode: item.periode
-      });
-    } else {
-      setEditingId(null);
-      setFormData({
-        nama: "",
-        jabatan: "Anggota",
-        no_hp: "",
-        periode: "2025-2027"
-      });
-    }
-    setIsDialogOpen(true);
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingId) {
-        const { error } = await supabase
-          .from('pengurus')
-          .update(formData)
-          .eq('id', editingId);
-        
-        if (error) throw error;
-        toaster.create({
-          title: "Berhasil",
-          description: "Data pengurus berhasil diperbarui",
-          type: "success",
-        });
-      } else {
-        const { error } = await supabase
-          .from('pengurus')
-          .insert([{ 
-            ...formData, 
-            perumahan_id: profile?.perumahan_id 
-          }]);
-        
-        if (error) throw error;
-        toaster.create({
-          title: "Berhasil",
-          description: "Pengurus baru berhasil ditambahkan",
-          type: "success",
-        });
-      }
-      setIsDialogOpen(false);
-      fetchData();
-    } catch (error) {
-      toaster.create({
-        title: "Terjadi kesalahan",
-        description: error.message,
-        type: "error",
-      });
-    }
-  };
+  const filteredData = data.filter(item => 
+    item.nama?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.jabatan?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const handleDelete = async (id) => {
-    if (!confirm("Hapus data pengurus ini?")) return;
-    try {
-      const { error } = await supabase
-        .from('pengurus')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      toaster.create({
-        title: "Berhasil",
-        description: "Data pengurus dihapus",
-        type: "success",
-      });
-      fetchData();
-    } catch (error) {
-      toaster.create({
-        title: "Gagal menghapus",
-        description: error.message,
-        type: "error",
-      });
-    }
-  };
-
-  const getJabatanColor = (jabatan) => {
-    if (jabatan.includes("Ketua")) return "blue";
-    if (jabatan.includes("Sekretaris") || jabatan.includes("Bendahara")) return "purple";
-    return "gray";
-  };
+  if (profile?.role === 'super_admin' && !selectedPerumahanId) {
+    return <SelectionRequired />;
+  }
 
   return (
-    <VStack spacing={6} align="stretch" width="full">
-      <Flex direction={{ base: "column", md: "row" }} justify="space-between" align={{ base: "start", md: "center" }} gap={4}>
-        <Box>
-          <Heading size="lg" fontWeight="bold" letterSpacing="tight" color="gray.900">Data Pengurus Paguyuban</Heading>
-          <Text color="gray.500">Kelola informasi kepengurusan RT/RW atau Paguyuban Perumahan.</Text>
-        </Box>
-        
-        <DialogRoot 
-          open={isDialogOpen} 
-          onOpenChange={(e) => setIsDialogOpen(e.open)}
-          placement="center"
-        >
-          <Button colorScheme="blue" leftIcon={<Icon as={Plus} boxSize={4} />} onClick={() => handleOpenDialog()}>
-            Tambah Pengurus
-          </Button>
-          
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingId ? "Edit Data Pengurus" : "Tambah Pengurus"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <DialogBody pb={6}>
-                <Stack spacing={4}>
-                  <Field label="Nama Lengkap" required>
-                    <Input 
-                      value={formData.nama}
-                      onChange={(e) => setFormData({...formData, nama: e.target.value})}
-                      placeholder="Nama lengkap pengurus"
-                    />
-                  </Field>
-                  
-                  <Field label="Jabatan" required>
-                    <SelectRoot 
-                      value={[formData.jabatan]} 
-                      onValueChange={(e) => setFormData({...formData, jabatan: e.value[0]})}
-                    >
-                      <SelectTrigger>
-                        <SelectValueText placeholder="Pilih jabatan" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem item="Ketua Paguyuban" key="Ketua Paguyuban">Ketua</SelectItem>
-                        <SelectItem item="Wakil Ketua" key="Wakil Ketua">Wakil Ketua</SelectItem>
-                        <SelectItem item="Sekretaris" key="Sekretaris">Sekretaris</SelectItem>
-                        <SelectItem item="Bendahara" key="Bendahara">Bendahara</SelectItem>
-                        <SelectItem item="Seksi Keamanan" key="Seksi Keamanan">Seksi Keamanan</SelectItem>
-                        <SelectItem item="Seksi Lingkungan" key="Seksi Lingkungan">Seksi Lingkungan</SelectItem>
-                        <SelectItem item="Anggota" key="Anggota">Anggota</SelectItem>
-                      </SelectContent>
-                    </SelectRoot>
-                  </Field>
-                  
-                  <Field label="No. HP">
-                    <Input 
-                      value={formData.no_hp}
-                      onChange={(e) => setFormData({...formData, no_hp: e.target.value})}
-                      placeholder="0812..."
-                    />
-                  </Field>
-                  
-                  <Field label="Periode Jabatan" required>
-                    <Input 
-                      placeholder="Contoh: 2025-2027"
-                      value={formData.periode}
-                      onChange={(e) => setFormData({...formData, periode: e.target.value})}
-                    />
-                  </Field>
-                </Stack>
-              </DialogBody>
-              
-              <DialogFooter>
-                <DialogActionTrigger asChild>
-                  <Button variant="ghost">Batal</Button>
-                </DialogActionTrigger>
-                <Button type="submit" colorScheme="blue">Simpan Data</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </DialogRoot>
-      </Flex>
+    <div className="bg-transparent">
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-slate-900">Management Staff</h1>
+          <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold text-sm hover:opacity-90 transition-all">
+            <Plus className="w-4 h-4" /> Add Staff
+          </button>
+        </div>
 
-      <Box bg="white" borderRadius="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
-        <Box overflowX="auto">
-          <Table.Root variant="simple">
-            <Table.Header bg="gray.50">
-              <Table.Row>
-                <Table.ColumnHeader>Nama Pengurus</Table.ColumnHeader>
-                <Table.ColumnHeader>Jabatan</Table.ColumnHeader>
-                <Table.ColumnHeader>No. HP</Table.ColumnHeader>
-                <Table.ColumnHeader>Periode</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Aksi</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {loading ? (
-                <Table.Row>
-                  <Table.Cell colSpan={5} py={10}>
-                    <Center>
-                      <HStack spacing={3} color="gray.500">
-                        <Spinner size="sm" />
-                        <Text>Memuat data pengurus...</Text>
-                      </HStack>
-                    </Center>
-                  </Table.Cell>
-                </Table.Row>
-              ) : data.length === 0 ? (
-                <Table.Row>
-                  <Table.Cell colSpan={5} textAlign="center" py={10} color="gray.500">
-                    Belum ada data pengurus.
-                  </Table.Cell>
-                </Table.Row>
-              ) : (
-                data.map((item) => (
-                  <Table.Row key={item.id}>
-                    <Table.Cell fontWeight="medium" color="gray.900">{item.nama}</Table.Cell>
-                    <Table.Cell>
-                      <Badge 
-                        variant="outline" 
-                        colorScheme={getJabatanColor(item.jabatan)}
-                        bg={`${getJabatanColor(item.jabatan)}.50`}
-                      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard title="Total Staff" value={data.length} icon={Shield} color="indigo" />
+          <StatCard title="Active Period" value="2025-2027" icon={Calendar} color="green" />
+          <StatCard title="Status" value="Active" icon={UserCheck} color="blue" />
+        </div>
+
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-100 bg-white">
+            <div className="relative w-full md:w-96">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-slate-400" />
+              </div>
+              <input 
+                type="text"
+                placeholder="Search staff..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:border-indigo-600 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Staff Name</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Position</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Phone</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Period</th>
+                  <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array(5).fill(0).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={5} className="px-6 py-4"><div className="h-5 bg-slate-100 rounded"></div></td>
+                    </tr>
+                  ))
+                ) : filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-20 text-center text-slate-400 font-medium">No staff records.</td>
+                  </tr>
+                ) : filteredData.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50 border-b border-slate-50 transition-all">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-indigo-50 rounded flex items-center justify-center text-indigo-600 font-bold text-xs uppercase">
+                          {item.nama.charAt(0)}
+                        </div>
+                        <span className="text-sm font-semibold text-slate-900">{item.nama}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-xs font-bold">
                         {item.jabatan}
-                      </Badge>
-                    </Table.Cell>
-                    <Table.Cell>{item.no_hp || "-"}</Table.Cell>
-                    <Table.Cell>{item.periode}</Table.Cell>
-                    <Table.Cell textAlign="right">
-                      <HStack justify="end" spacing={2}>
-                        <Button variant="ghost" size="sm" p={1} onClick={() => handleOpenDialog(item)}>
-                          <Icon as={Edit} boxSize={4} color="blue.600" />
-                        </Button>
-                        <Button variant="ghost" size="sm" p={1} onClick={() => handleDelete(item.id)}>
-                          <Icon as={Trash2} boxSize={4} color="red.600" />
-                        </Button>
-                      </HStack>
-                    </Table.Cell>
-                  </Table.Row>
-                ))
-              )}
-            </Table.Body>
-          </Table.Root>
-        </Box>
-      </Box>
-    </VStack>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{item.no_hp || "-"}</td>
+                    <td className="px-6 py-4 text-sm text-slate-500">{item.periode}</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button className="p-1.5 text-slate-400 hover:text-indigo-600 transition-all"><Edit className="w-4 h-4" /></button>
+                        <button className="p-1.5 text-slate-400 hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

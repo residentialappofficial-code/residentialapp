@@ -1,23 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Lock, Mail } from "lucide-react";
-import {
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Input,
-  Stack,
-  Text,
-  Icon,
-  HStack,
-  Center,
-} from "@chakra-ui/react";
-import { InputGroup } from "@/components/ui/chakra/input-group";
-import { Field } from "@/components/ui/chakra/field";
-import { PasswordInput } from "@/components/ui/chakra/password-input";
+import { Lock, Mail, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { toaster } from "@/components/ui/chakra/toaster";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -32,200 +16,113 @@ export default function Login() {
       setLoading(true);
       const { error } = await signIn(email, password);
       if (error) throw error;
-      
-      toaster.create({
-        title: "Berhasil masuk",
-        description: "Selamat datang kembali!",
-        type: "success",
-      });
       navigate("/dashboard");
     } catch (error) {
-      toaster.create({
-        title: "Gagal masuk",
-        description: error.message,
-        type: "error",
-      });
+      alert(error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Flex minHeight="100vh" width="100vw" overflow="hidden">
-      {/* Left Side: Illustration & Branding */}
-      <Box
-        display={{ base: "none", lg: "flex" }}
-        flex="1.2"
-        bg="gray.900"
-        color="white"
-        p={12}
-        flexDirection="column"
-        justifyContent="space-between"
-        position="relative"
-        overflow="hidden"
-      >
-        {/* Subtle Decorative Accents (Emerald) */}
-        <Box
-          position="absolute"
-          top="-10%"
-          right="-10%"
-          width="60%"
-          height="60%"
-          bg="emerald.600"
-          borderRadius="full"
-          opacity="0.08"
-          filter="blur(80px)"
-        />
-        <Box
-          position="absolute"
-          bottom="-10%"
-          left="-10%"
-          width="40%"
-          height="40%"
-          bg="emerald.500"
-          borderRadius="full"
-          opacity="0.05"
-          filter="blur(60px)"
-        />
+    <div className="flex min-h-screen w-full bg-slate-50">
+      {/* Left Side: Branding */}
+      <div className="hidden lg:flex flex-1 bg-slate-800 text-white p-12 flex-col justify-between relative overflow-hidden">
+        {/* Background Decorative */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600 opacity-10 blur-3xl rounded-full -mr-20 -mt-20"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600 opacity-10 blur-3xl rounded-full -ml-20 -mb-20"></div>
 
-        <Box position="relative">
-          <HStack spacing={4} mb={12}>
-            <Center h={12} w={12} bg="#10b981" color="white" borderRadius="14px" fontWeight="900" fontSize="2xl" boxShadow="0 0 20px rgba(16, 185, 129, 0.4)">F</Center>
-            <Text fontSize="2xl" fontWeight="900" color="white" letterSpacing="-0.03em">Flup</Text>
-          </HStack>
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-16">
+            <div className="bg-indigo-600 p-2 rounded-lg">
+              <ShieldCheck className="w-8 h-8 text-white" />
+            </div>
+            <span className="text-2xl font-bold tracking-tight">FineHome</span>
+          </div>
           
-          <Stack spacing={6} maxWidth="xl" className="slide-up-fade-in">
-            <Heading size="4xl" lineHeight="1.1" fontWeight="900" letterSpacing="-0.05em">
-              Residential management <br />
-              <Text as="span" color="#10b981">made effortless.</Text>
-            </Heading>
-            <Text fontSize="lg" color="gray.400" fontWeight="500" lineHeight="tall">
+          <div className="max-w-md">
+            <h1 className="text-5xl font-bold leading-tight mb-6">
+              Residential management <span className="text-indigo-400">made effortless.</span>
+            </h1>
+            <p className="text-lg text-slate-400 font-medium">
               A transparent, secure, and modern platform designed to simplify the complexities of residential living.
-            </Text>
-          </Stack>
-        </Box>
+            </p>
+          </div>
+        </div>
 
-        <HStack justify="space-between" color="gray.500" fontWeight="700" fontSize="xs">
-          <Text>© 2025 Flup Technologies.</Text>
-          <HStack spacing={4}>
-            <Link to="#">Terms</Link>
-            <Link to="#">Privacy</Link>
-          </HStack>
-        </HStack>
-      </Box>
+        <div className="relative z-10 flex justify-between text-xs font-bold text-slate-500 uppercase tracking-widest">
+          <span>© 2026 FineHome Tech.</span>
+          <div className="flex gap-4">
+            <a href="#" className="hover:text-white transition-all">Terms</a>
+            <a href="#" className="hover:text-white transition-all">Privacy</a>
+          </div>
+        </div>
+      </div>
 
-      {/* Right Side: Login Form */}
-      <Flex flex="2" bg="gray.50" align="center" justify="center" p={8} position="relative">
-        <Stack spacing={6} width="full" maxWidth="md" className="slide-up-fade-in" style={{ animationDelay: '100ms' }}>
-          <Stack spacing={2}>
-            <Heading size="2xl" color="gray.900" fontWeight="900" letterSpacing="-0.03em">Login to your account</Heading>
-            <Text color="gray.500" fontWeight="600" fontSize="md">Enter your credentials to manage your complex</Text>
-          </Stack>
+      {/* Right Side: Form */}
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-md">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome Back</h2>
+            <p className="text-slate-500 font-medium">Enter your credentials to access the portal.</p>
+          </div>
 
-          <Box 
-            bg="white" 
-            p={8} 
-            borderRadius="16px" 
-            boxShadow="0 4px 20px rgba(0, 0, 0, 0.03)" 
-            border="1px solid" 
-            borderColor="gray.100"
-          >
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={6}>
-                <Field label="Email Address">
-                  <InputGroup width="full" startElement={<Icon as={Mail} color="gray.400" />}>
-                    <Input
-                      type="email"
-                      placeholder="name@company.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      height="12"
-                      bg="white"
-                      border="1px solid"
-                      borderColor="gray.200"
-                      borderRadius="10px"
-                      ps="12"
-                      _focus={{ 
-                        borderColor: "#10b981", 
-                        borderWidth: "2px",
-                        boxShadow: "none",
-                        outline: "none"
-                      }}
-                      _autofill={{
-                        boxShadow: "0 0 0 1000px white inset",
-                        WebkitTextFillColor: "#1f2937",
-                        transition: "background-color 5000s ease-in-out 0s"
-                      }}
-                      fontWeight="600"
-                    />
-                  </InputGroup>
-                </Field>
+          <div className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Email Address</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-600 transition-all font-medium"
+                    placeholder="name@example.com"
+                  />
+                </div>
+              </div>
 
-                <Stack spacing={1}>
-                  <Flex justify="space-between" align="center" px={1}>
-                    <Text fontSize="sm" fontWeight="800" color="gray.800">Password</Text>
-                    <Link to="/forgot-password" style={{ fontSize: "14px", color: "#10b981", fontWeight: "800" }}>
-                      Forgot?
-                    </Link>
-                  </Flex>
-                  <PasswordInput
-                    placeholder="••••••••"
+              <div className="flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Password</label>
+                  <a href="#" className="text-xs font-bold text-indigo-600 hover:underline">Forgot?</a>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    type="password"
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    height="12"
-                    bg="white"
-                    border="1px solid"
-                    borderColor="gray.200"
-                    borderRadius="10px"
-                    ps="12"
-                    _focus={{ 
-                      borderColor: "#10b981", 
-                      borderWidth: "2px",
-                      boxShadow: "none",
-                      outline: "none"
-                    }}
-                    _autofill={{
-                      boxShadow: "0 0 0 1000px white inset",
-                      WebkitTextFillColor: "#1f2937",
-                      transition: "background-color 5000s ease-in-out 0s"
-                    }}
-                    fontWeight="600"
-                    rootProps={{ 
-                      width: "full",
-                      startElement: <Icon as={Lock} color="gray.400" />
-                    }}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-600 transition-all font-medium"
+                    placeholder="••••••••"
                   />
-                </Stack>
+                </div>
+              </div>
 
-                <Button
-                  type="submit"
-                  size="xl"
-                  height="14"
-                  fontSize="md"
-                  isLoading={loading}
-                  bg="#10b981"
-                  color="white"
-                  borderRadius="12px"
-                  _hover={{ bg: "#059669", transform: "translateY(-1px)" }}
-                  _active={{ transform: "translateY(0)" }}
-                  fontWeight="900"
-                  boxShadow="0 10px 15px -3px rgba(16, 185, 129, 0.2)"
-                  width="full"
-                >
-                  Login to Flup
-                </Button>
-              </Stack>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold text-sm hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : 'Sign In'}
+              </button>
             </form>
-          </Box>
+          </div>
 
-          <Text textAlign="center" color="gray.600" fontWeight="600" fontSize="sm">
-            Need an account?{" "}
-            <Link to="/register" style={{ fontWeight: "800", color: "#10b981" }}>
-              Register your complex
-            </Link>
-          </Text>
-        </Stack>
-      </Flex>
-    </Flex>
+          <p className="mt-8 text-center text-sm font-medium text-slate-500">
+            Don't have an account? <Link to="/register" className="text-indigo-600 font-bold hover:underline">Register now</Link>
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
