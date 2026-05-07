@@ -1,9 +1,38 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, TrendingUp, TrendingDown, WalletCards, Search, MoreVertical, Filter, FileText } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, WalletCards, Search, MoreVertical, Filter, FileText, Edit, Trash2, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-
+import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal } from "@/components/ui";
 import { SelectionRequired } from "@/components/ui/SelectionRequired";
+
+const CashflowStatCard = ({ title, value, icon: Icon, type = "neutral" }) => {
+  const styles = {
+    neutral: "bg-slate-950 text-white border border-slate-900 shadow-none",
+    success: "bg-green-50 text-green-600 border border-green-100 shadow-none",
+    danger: "bg-red-50 text-red-600 border border-red-100 shadow-none",
+  };
+
+  return (
+    <Card className="relative overflow-hidden group">
+      <div className="flex flex-col gap-8">
+        <div className="flex justify-between items-start">
+          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] ${styles[type]}  transition-transform group-hover:scale-110 duration-300`}>
+            <Icon className="w-5 h-5" />
+          </div>
+        </div>
+        
+        <div className="space-y-1">
+          <h3 className="text-xl font-bold text-slate-900 tracking-tighter">
+            <span className="text-sm font-bold mr-1 opacity-40">Rp</span>
+            {value.toLocaleString()}
+          </h3>
+          <p className="text-xs font-bold text-slate-400">{title}</p>
+        </div>
+      </div>
+      <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    </Card>
+  );
+};
 
 export default function ArusKas() {
   const { selectedPerumahanId, profile } = useAuth();
@@ -11,29 +40,123 @@ export default function ArusKas() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState({ masuk: 0, keluar: 0, saldo: 0 });
   const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    tanggal: new Date().toISOString().split('T')[0],
+    keterangan: "",
+    kategori: "Pemasukan",
+    jumlah: 0
+  });
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       if (!selectedPerumahanId) return;
 
-      const { data: transactions } = await supabase
+      const { data: transactions, error } = await supabase
         .from('arus_kas')
         .select('*')
         .eq('perumahan_id', selectedPerumahanId)
         .order('tanggal', { ascending: false });
       
+      if (error) throw error;
+      
       setData(transactions || []);
 
-      const masuk = transactions?.filter(t => t.tipe === "Masuk").reduce((acc, curr) => acc + curr.jumlah, 0) || 0;
-      const keluar = transactions?.filter(t => t.tipe === "Keluar").reduce((acc, curr) => acc + curr.jumlah, 0) || 0;
+      const masuk = transactions?.filter(t => t.kategori === "Pemasukan").reduce((acc, curr) => acc + curr.jumlah, 0) || 0;
+      const keluar = transactions?.filter(t => t.kategori === "Pengeluaran").reduce((acc, curr) => acc + curr.jumlah, 0) || 0;
       setSummary({ masuk, keluar, saldo: masuk - keluar });
-    } catch {
-      console.error("Gagal memuat data");
+    } catch (err) {
+      console.error("Gagal memuat data:", err);
     } finally {
       setLoading(false);
     }
   }, [selectedPerumahanId]);
+
+  const handleEdit = (item) => {
+    setEditingId(item.id);
+    setFormData({
+      tanggal: item.tanggal,
+      keterangan: item.keterangan || "",
+      kategori: item.kategori || "Pemasukan",
+      jumlah: item.jumlah || 0
+    });
+    setIsEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const handleExportCSV = () => {
+    if (data.length === 0) return;
+    const headers = ["Tanggal", "Keterangan", "Kategori", "Jumlah"];
+    const rows = data.map(item => [
+      item.tanggal,
+      `"${item.keterangan}"`,
+      item.kategori,
+      item.jumlah
+    ]);
+    
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `arus_kas_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleAddTransaction = async (e) => {
+    if (e) e.preventDefault();
+    if (!selectedPerumahanId) return;
+    setIsSubmitting(true);
+    try {
+      if (isEditMode) {
+        const { error } = await supabase
+          .from('arus_kas')
+          .update(formData)
+          .eq('id', editingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('arus_kas')
+          .insert([{ 
+            ...formData, 
+            perumahan_id: selectedPerumahanId
+          }]);
+        if (error) throw error;
+      }
+      
+      setIsModalOpen(false);
+      setIsEditMode(false);
+      setEditingId(null);
+      setFormData({ 
+        tanggal: new Date().toISOString().split('T')[0], 
+        keterangan: "", 
+        kategori: "Pemasukan", 
+        jumlah: 0 
+      });
+      fetchData();
+    } catch (err) {
+      alert("Gagal menyimpan transaksi: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Hapus transaksi ini secara permanen?")) return;
+    try {
+      const { error } = await supabase.from('arus_kas').delete().eq('id', id);
+      if (error) throw error;
+      fetchData();
+    } catch (err) {
+      alert("Gagal menghapus: " + err.message);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -48,127 +171,167 @@ export default function ArusKas() {
   }
 
   return (
-    <div className="bg-transparent">
-      <div className="flex flex-col gap-4">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Arus Kas</h1>
-            <p className="text-slate-500 text-sm">Monitor aliran dana masuk dan keluar kompleks Anda.</p>
-          </div>
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white rounded-lg font-semibold text-sm hover:bg-slate-50 transition-all">
-              <FileText className="w-4 h-4 text-slate-400" /> Export PDF
-            </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold text-sm hover:opacity-90 transition-all shadow-sm">
-              <Plus className="w-4 h-4" /> Tambah Transaksi
-            </button>
-          </div>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Arus Kas & Keuangan</h1>
+          <p className="text-slate-500 text-sm font-medium">Pantau seluruh pemasukan dan pengeluaran operasional perumahan.</p>
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-slate-900">Rp {summary.masuk.toLocaleString()}</p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pemasukan</p>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-600">
-              <TrendingDown className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-slate-900">Rp {summary.keluar.toLocaleString()}</p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pengeluaran</p>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600">
-              <WalletCards className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-slate-900">Rp {summary.saldo.toLocaleString()}</p>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Saldo Akhir</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Transactions Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 bg-white flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1 md:w-80">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-4 w-4 text-slate-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Cari transaksi..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:border-indigo-600 transition-all"
-              />
-            </div>
-            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all">
-              <Filter className="w-4 h-4" /> Filter
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest">Tanggal</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest">Keterangan</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest">Tipe</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest text-right">Jumlah</th>
-                  <th className="px-6 py-4 text-xs font-bold text-slate-600 uppercase tracking-widest text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  Array(5).fill(0).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td colSpan={5} className="px-6 py-4"><div className="h-4 bg-slate-100 rounded"></div></td>
-                    </tr>
-                  ))
-                ) : filteredData.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-10 text-center text-slate-400 font-medium">Tidak ada transaksi.</td>
-                  </tr>
-                ) : filteredData.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50 border-b border-slate-50 transition-all">
-                    <td className="px-6 py-4 text-xs font-semibold text-slate-500">
-                      {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-semibold text-slate-800">{item.keterangan}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        item.tipe === "Masuk" ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-                      }`}>
-                        {item.tipe}
-                      </span>
-                    </td>
-                    <td className={`px-6 py-4 text-sm font-bold text-right ${
-                      item.tipe === "Masuk" ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      Rp {item.jumlah?.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-slate-400 hover:text-indigo-600 transition-all">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" icon={FileText} onClick={handleExportCSV} className="text-slate-400 font-bold hover:bg-slate-50">Ekspor Laporan</Button>
+          <Button variant="primary" size="lg" icon={Plus} className="px-10  shadow-none" onClick={() => {
+            setIsEditMode(false);
+            setEditingId(null);
+            setFormData({ tanggal: new Date().toISOString().split('T')[0], keterangan: "", kategori: "Pemasukan", jumlah: 0 });
+            setIsModalOpen(true);
+          }}>Input Transaksi</Button>
         </div>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <CashflowStatCard title="Total Pemasukan" value={summary.masuk} icon={ArrowUpRight} type="success" />
+        <CashflowStatCard title="Total Pengeluaran" value={summary.keluar} icon={ArrowDownRight} type="danger" />
+        <CashflowStatCard title="Saldo Kas Saat Ini" value={summary.saldo} icon={WalletCards} type="neutral" />
+      </div>
+
+      <Card noPadding>
+        <CardHeader 
+          title="Riwayat Transaksi"
+          subtitle="Daftar lengkap seluruh pergerakan dana yang telah tervalidasi"
+          action={
+            <div className="flex gap-4">
+              <Input 
+                placeholder="Cari transaksi..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                icon={Search}
+                className="w-80"
+              />
+              <Button variant="ghost" icon={Filter} size="sm" className="text-slate-400" />
+            </div>
+          }
+        />
+
+        <Table>
+          <THead>
+            <TR isHeader>
+              <TH>Tanggal</TH>
+              <TH>Keterangan</TH>
+              <TH>Klasifikasi</TH>
+              <TH textAlign="right">Jumlah</TH>
+              <TH textAlign="right">Aksi</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {loading ? (
+              Array(6).fill(0).map((_, i) => (
+                <TR key={i}><TD colSpan={5}><div className="h-12 bg-slate-50 rounded-xl animate-pulse"></div></TD></TR>
+              ))
+            ) : filteredData.length === 0 ? (
+              <TR>
+                <TD colSpan={5} textAlign="center" className="py-24 text-xs font-bold tracking-[0.3em] text-slate-400">Tidak ada data transaksi ditemukan.</TD>
+              </TR>
+            ) : filteredData.map((item) => (
+              <TR key={item.id} className="group">
+                <TD className="text-xs font-bold text-slate-400 ">
+                  {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </TD>
+                <TD>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-900 tracking-tight">{item.keterangan}</span>
+                    <span className="text-[9px] font-bold text-slate-400 ">TXN: {item.id.substring(0, 12)}</span>
+                  </div>
+                </TD>
+                <TD>
+                  <Badge variant={item.kategori === "Pemasukan" ? 'green' : 'red'} className="font-bold">
+                    {item.kategori === "Pemasukan" ? 'PEMASUKAN' : 'PENGELUARAN'}
+                  </Badge>
+                </TD>
+                <TD className={`text-sm font-bold text-right tracking-tight ${item.kategori === "Pemasukan" ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {item.kategori === "Pemasukan" ? '+' : '-'} Rp {item.jumlah?.toLocaleString()}
+                </TD>
+                <TD textAlign="right">
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" icon={Edit} onClick={() => handleEdit(item)} className="text-slate-400 hover:text-slate-950" />
+                    <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-red-500" />
+                  </div>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </Card>
+
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title={isEditMode ? "Ubah Transaksi" : "Input Transaksi Baru"}
+      >
+        <div className="space-y-10 p-2">
+          <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+            <div className="w-10 h-10 bg-slate-950 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-white ">
+              <Activity className="w-5 h-5" />
+            </div>
+            <p className="text-xs text-slate-500 font-bold leading-relaxed">Pastikan seluruh nominal yang dimasukkan telah sesuai dengan bukti fisik transaksi.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8">
+            <Input 
+              label="Tanggal Transaksi"
+              type="date"
+              required 
+              value={formData.tanggal} 
+              onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
+              icon={Calendar}
+            />
+            <div className="flex flex-col gap-3">
+              <label className="text-xs font-bold text-slate-400  ml-1">Tipe Aliran Dana</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Pemasukan', 'Pengeluaran'].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setFormData({...formData, kategori: t})}
+                    className={`py-4 rounded-2xl text-xs font-bold  transition-all border-2 ${
+                      formData.kategori === t 
+                        ? 'bg-slate-950 border-slate-950 text-white ' 
+                        : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <Input 
+            label="Keterangan"
+            required 
+            value={formData.keterangan} 
+            onChange={(e) => setFormData({...formData, keterangan: e.target.value})}
+            placeholder="Contoh: Biaya Perbaikan Taman"
+            icon={FileText}
+          />
+
+          <Input 
+            label="Jumlah (Rp)"
+            type="number"
+            required 
+            value={formData.jumlah} 
+            onChange={(e) => setFormData({...formData, jumlah: parseInt(e.target.value) || 0})}
+            placeholder="0"
+            icon={DollarSign}
+          />
+
+          <div className="flex gap-4 pt-6">
+            <Button variant="ghost" className="flex-1 py-3 font-bold  text-xs" onClick={() => setIsModalOpen(false)}>Batal</Button>
+            <Button variant="primary" className="flex-1 py-3  shadow-none font-bold  text-xs" onClick={handleAddTransaction} isLoading={isSubmitting}>
+              {isEditMode ? "Simpan Perubahan" : "Konfirmasi Transaksi"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

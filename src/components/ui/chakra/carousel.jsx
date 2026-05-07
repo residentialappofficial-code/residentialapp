@@ -6,70 +6,70 @@ import * as React from 'react'
 import { Pause, Play } from 'lucide-react'
 
 export const CarouselRoot = React.forwardRef(function CarouselRoot(props, ref) {
-  const { children, withAutoplay, ...rest } = props
-  return (
-    <Carousel.Root {...rest} ref={ref}>
-      {children}
-      {withAutoplay && (
-        <Box
-          position='absolute'
-          bottom='var(--carousel-spacing)'
-          right='var(--carousel-spacing)'
-        >
-          <Carousel.AutoplayTrigger asChild>
-            <IconButton aria-label='Toggle autoplay' size='sm' variant='ghost'>
-              <AutoplayIcon />
-            </IconButton>
-          </Carousel.AutoplayTrigger>
-        </Box>
-      )}
-    </Carousel.Root>
-  )
+ const { children, withAutoplay, ...rest } = props
+ return (
+  <Carousel.Root {...rest} ref={ref}>
+   {children}
+   {withAutoplay && (
+    <Box
+     position='absolute'
+     bottom='var(--carousel-spacing)'
+     right='var(--carousel-spacing)'
+    >
+     <Carousel.AutoplayTrigger asChild>
+      <IconButton aria-label='Toggle autoplay' size='sm' variant='ghost'>
+       <AutoplayIcon />
+      </IconButton>
+     </Carousel.AutoplayTrigger>
+    </Box>
+   )}
+  </Carousel.Root>
+ )
 })
 
 export const CarouselControls = React.forwardRef(
-  function CarouselControls(props, ref) {
-    return (
-      <Carousel.Control ref={ref} {...props}>
-        <Carousel.PrevTrigger aria-label='Previous' />
-        <Carousel.NextTrigger aria-label='Next' />
-      </Carousel.Control>
-    )
-  },
+ function CarouselControls(props, ref) {
+  return (
+   <Carousel.Control ref={ref} {...props}>
+    <Carousel.PrevTrigger aria-label='Previous' />
+    <Carousel.NextTrigger aria-label='Next' />
+   </Carousel.Control>
+  )
+ },
 )
 
 export const CarouselIndicators = React.forwardRef(
-  function CarouselIndicators(props, ref) {
-    return <Carousel.IndicatorGroup ref={ref} {...props} />
-  },
+ function CarouselIndicators(props, ref) {
+  return <Carousel.IndicatorGroup ref={ref} {...props} />
+ },
 )
 
 export const CarouselItem = React.forwardRef(function CarouselItem(
-  { src, alt, children, ...rest },
-  ref,
+ { src, alt, children, ...rest },
+ ref,
 ) {
-  return (
-    <Carousel.Item {...rest} ref={ref}>
-      {src ? (
-        <Image
-          src={src}
-          alt={alt}
-          w='full'
-          h='300px'
-          objectFit='cover'
-          borderRadius='md'
-        />
-      ) : (
-        children
-      )}
-    </Carousel.Item>
-  )
+ return (
+  <Carousel.Item {...rest} ref={ref}>
+   {src ? (
+    <Image
+     src={src}
+     alt={alt}
+     w='full'
+     h='300px'
+     objectFit='cover'
+     borderRadius='md'
+    />
+   ) : (
+    children
+   )}
+  </Carousel.Item>
+ )
 })
 
 const AutoplayIcon = () => {
-  const [running, setRunning] = React.useState(true)
-  const toggle = () => setRunning(!running)
-  return <Box onClick={toggle}>{running ? <Pause /> : <Play />}</Box>
+ const [running, setRunning] = React.useState(true)
+ const toggle = () => setRunning(!running)
+ return <Box onClick={toggle}>{running ? <Pause /> : <Play />}</Box>
 }
 
 export const CarouselItemGroup = Carousel.ItemGroup

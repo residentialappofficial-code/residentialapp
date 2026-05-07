@@ -56,7 +56,7 @@ src/
 
 ## 5. Code Style & Tech Stack
 *   **Frontend**: React + Vite
-*   **Styling**: Chakra UI v3 + Vanilla CSS untuk premium aesthetics.
+*   **Styling**: Chakra UI v3 + Tailwind CSS with a **Premium Black & White Theme** (Slate-950/Black accents, clean white backgrounds, and slate grays for text/borders).
 *   **Backend/DB**: Supabase (Auth, Store, Postgres).
 *   **State Management**: React Context (AuthContext).
 *   **Security**: RLS (Row Level Security) wajib di setiap tabel baru menggunakan `perumahan_id`.
@@ -65,3 +65,21 @@ src/
 *   **Always**: Gunakan `perumahan_id` untuk setiap query data agar tidak bocor antar komplek.
 *   **Ask First**: Sebelum menambahkan integrasi Payment Gateway (pihak ketiga) jika diperlukan di masa depan.
 *   **Never**: Menyimpan password atau data sensitif di tabel profil (gunakan Supabase Auth).
+
+### UI & UX Standards
+#### Design Aesthetic
+*   **Theme**: Premium Black & White (High contrast).
+*   **Rounding**: Standard rounding reduced for a sharper, modern feel (approx 1/3 of previous values).
+    *   **Major Containers (Cards, Modals)**: `rounded-2xl` (1rem / 16px).
+    *   **Buttons & Inputs**: `rounded-xl` (0.75rem / 12px) or `rounded-lg` (0.5rem / 8px).
+*   **Typography**: Inter or similar clean sans-serif.
+
+#### Sidebar Organization
+Menu pada sidebar harus dikelompokkan secara visual untuk membedakan fitur khusus Resident dan Admin:
+*   **Resident Section**: Dashboard, Tagihan Saya, Lapor Keluhan, Pinjam Alat.
+*   **Admin Section**: Manajemen Warga, Verifikasi Pembayaran, Konfigurasi Iuran, Kelola Pengumuman, Inventaris Aset.
+
+#### Security & Validation
+*   **Password Format**: Minimum 8 karakter, 1 huruf besar, 1 angka.
+*   **Visual Feedback**: Implementasikan Password Strength Indicator.
+*   **Security**: Toggle Show/Hide password di semua input password.

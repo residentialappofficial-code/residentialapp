@@ -5,57 +5,57 @@ import { CloseButton } from './close-button'
 import * as React from 'react'
 
 export const TagsInputControl = React.forwardRef(
-  function TagsInputControl(props, ref) {
-    const { children, clearable, ...rest } = props
-    return (
-      <ChakraTagsInput.Control {...rest} ref={ref}>
-        {children}
-        {clearable && <TagsInputClearTrigger />}
-      </ChakraTagsInput.Control>
-    )
-  },
+ function TagsInputControl(props, ref) {
+  const { children, clearable, ...rest } = props
+  return (
+   <ChakraTagsInput.Control {...rest} ref={ref}>
+    {children}
+    {clearable && <TagsInputClearTrigger />}
+   </ChakraTagsInput.Control>
+  )
+ },
 )
 
 const TagsInputClearTrigger = React.forwardRef(
-  function TagsInputClearTrigger(props, ref) {
-    return (
-      <ChakraTagsInput.ClearTrigger asChild {...props} ref={ref}>
-        <CloseButton
-          size='xs'
-          variant='plain'
-          focusVisibleRing='inside'
-          focusRingWidth='2px'
-          pointerEvents='auto'
-        />
-      </ChakraTagsInput.ClearTrigger>
-    )
-  },
+ function TagsInputClearTrigger(props, ref) {
+  return (
+   <ChakraTagsInput.ClearTrigger asChild {...props} ref={ref}>
+    <CloseButton
+     size='xs'
+     variant='plain'
+     focusVisibleRing='inside'
+     focusRingWidth='2px'
+     pointerEvents='auto'
+    />
+   </ChakraTagsInput.ClearTrigger>
+  )
+ },
 )
 
 export const TagsInputItem = React.forwardRef(
-  function TagsInputItem(props, ref) {
-    const { children, ...rest } = props
-    return (
-      <ChakraTagsInput.Item {...rest} ref={ref}>
-        <ChakraTagsInput.ItemText>{children}</ChakraTagsInput.ItemText>
-        <ChakraTagsInput.ItemDeleteTrigger asChild>
-          <CloseButton
-            size='2xs'
-            variant='plain'
-            focusVisibleRing='inside'
-            focusRingWidth='2px'
-            pointerEvents='auto'
-          />
-        </ChakraTagsInput.ItemDeleteTrigger>
-      </ChakraTagsInput.Item>
-    )
-  },
+ function TagsInputItem(props, ref) {
+  const { children, ...rest } = props
+  return (
+   <ChakraTagsInput.Item {...rest} ref={ref}>
+    <ChakraTagsInput.ItemText>{children}</ChakraTagsInput.ItemText>
+    <ChakraTagsInput.ItemDeleteTrigger asChild>
+     <CloseButton
+      size='2xs'
+      variant='plain'
+      focusVisibleRing='inside'
+      focusRingWidth='2px'
+      pointerEvents='auto'
+     />
+    </ChakraTagsInput.ItemDeleteTrigger>
+   </ChakraTagsInput.Item>
+  )
+ },
 )
 
 export const TagsInputRoot = React.forwardRef(
-  function TagsInputRoot(props, ref) {
-    return <ChakraTagsInput.Root {...props} ref={ref} />
-  },
+ function TagsInputRoot(props, ref) {
+  return <ChakraTagsInput.Root {...props} ref={ref} />
+ },
 )
 
 export const TagsInputItemText = ChakraTagsInput.ItemText

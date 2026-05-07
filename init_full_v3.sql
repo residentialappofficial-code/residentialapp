@@ -41,6 +41,10 @@ CREATE TABLE IF NOT EXISTS public.iuran_config (
     perumahan_id UUID REFERENCES public.perumahan(id) ON DELETE CASCADE PRIMARY KEY,
     tipe TEXT DEFAULT 'flat' CHECK (tipe IN ('flat', 'm2')),
     tarif_dasar BIGINT DEFAULT 0,
+    rekening_no TEXT,
+    rekening_bank TEXT,
+    rekening_nama TEXT,
+    qris_url TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -54,6 +58,7 @@ CREATE TABLE IF NOT EXISTS public.tagihan (
     jumlah BIGINT NOT NULL,
     status TEXT DEFAULT 'Unpaid' CHECK (status IN ('Unpaid', 'Pending', 'Paid')),
     bukti_bayar TEXT, -- URL from storage
+    unique_code INTEGER,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -76,6 +81,7 @@ CREATE TABLE IF NOT EXISTS public.keluhan (
     deskripsi TEXT NOT NULL,
     foto_url TEXT,
     status TEXT DEFAULT 'Open' CHECK (status IN ('Open', 'In Progress', 'Resolved')),
+    assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -112,6 +118,18 @@ CREATE TABLE IF NOT EXISTS public.arus_kas (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- 11. Pengurus Table
+CREATE TABLE IF NOT EXISTS public.pengurus (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    perumahan_id UUID REFERENCES public.perumahan(id) ON DELETE CASCADE,
+    warga_id UUID REFERENCES public.warga(id) ON DELETE SET NULL,
+    nama TEXT, -- Optional if linked to warga
+    jabatan TEXT NOT NULL,
+    no_hp TEXT,
+    periode TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- Enable RLS on all tables
 ALTER TABLE public.perumahan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -123,6 +141,7 @@ ALTER TABLE public.keluhan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.aset_komplek ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.peminjaman_aset ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.arus_kas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pengurus ENABLE ROW LEVEL SECURITY;
 
 -- Policies (Simplified for now, allows authenticated users to see their perumahan data)
 DROP POLICY IF EXISTS "Allow per-perumahan access" ON public.perumahan;
@@ -155,6 +174,9 @@ CREATE POLICY "Allow per-perumahan access pinjam" ON public.peminjaman_aset FOR 
 DROP POLICY IF EXISTS "Allow per-perumahan access kas" ON public.arus_kas;
 CREATE POLICY "Allow per-perumahan access kas" ON public.arus_kas FOR ALL USING (true);
 
+DROP POLICY IF EXISTS "Allow per-perumahan access pengurus" ON public.pengurus;
+CREATE POLICY "Allow per-perumahan access pengurus" ON public.pengurus FOR ALL USING (true);
+
 -- Function to handle new user registration
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
@@ -182,7 +204,72 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Storage Buckets
--- Note: Run these if you have permission to manage storage via SQL
--- INSERT INTO storage.buckets (id, name, public) VALUES ('receipts', 'receipts', true) ON CONFLICT (id) DO NOTHING;
--- INSERT INTO storage.buckets (id, name, public) VALUES ('complaints', 'complaints', true) ON CONFLICT (id) DO NOTHING;
+-- 12. Forum Posts Table
+CREATE TABLE IF NOT EXISTS public.forum_posts (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    perumahan_id UUID REFERENCES public.perumahan(id) ON DELETE CASCADE,
+    author_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    kategori TEXT DEFAULT 'Umum' CHECK (kategori IN ('Umum', 'Kegiatan', 'Keluhan', 'Jual Beli', 'Kehilangan')),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 13. Forum Comments Table
+CREATE TABLE IF NOT EXISTS public.forum_comments (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    post_id UUID REFERENCES public.forum_posts(id) ON DELETE CASCADE,
+    author_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 14. Forum Likes Table
+CREATE TABLE IF NOT EXISTS public.forum_likes (
+    post_id UUID REFERENCES public.forum_posts(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (post_id, user_id)
+);
+
+-- 15. Forum Bookmarks Table
+CREATE TABLE IF NOT EXISTS public.forum_bookmarks (
+    post_id UUID REFERENCES public.forum_posts(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    PRIMARY KEY (post_id, user_id)
+);
+
+-- 16. Penggajian Table
+CREATE TABLE IF NOT EXISTS public.penggajian (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    perumahan_id UUID REFERENCES public.perumahan(id) ON DELETE CASCADE,
+    pengurus_id UUID REFERENCES public.pengurus(id) ON DELETE CASCADE,
+    bulan INTEGER NOT NULL,
+    tahun INTEGER NOT NULL,
+    jumlah BIGINT NOT NULL,
+    status TEXT DEFAULT 'Pending' CHECK (status IN ('Pending', 'Paid')),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS
+ALTER TABLE public.forum_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forum_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forum_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forum_bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.penggajian ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+DROP POLICY IF EXISTS "Allow per-perumahan access forum" ON public.forum_posts;
+CREATE POLICY "Allow per-perumahan access forum" ON public.forum_posts FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow per-perumahan access comments" ON public.forum_comments;
+CREATE POLICY "Allow per-perumahan access comments" ON public.forum_comments FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow per-perumahan access likes" ON public.forum_likes;
+CREATE POLICY "Allow per-perumahan access likes" ON public.forum_likes FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow per-perumahan access bookmarks" ON public.forum_bookmarks;
+CREATE POLICY "Allow per-perumahan access bookmarks" ON public.forum_bookmarks FOR ALL USING (true);
+
+DROP POLICY IF EXISTS "Allow per-perumahan access gaji" ON public.penggajian;
+CREATE POLICY "Allow per-perumahan access gaji" ON public.penggajian FOR ALL USING (true);

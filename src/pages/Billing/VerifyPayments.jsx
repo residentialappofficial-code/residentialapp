@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { Search, CheckCircle, XCircle, Eye, ExternalLink, Calendar, User, Building } from "lucide-react";
+import { Search, CheckCircle2, XCircle, User, Info, AlertCircle, Copy, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button, Input, Card, CardHeader, Table, THead, TBody, TR, TH, TD, Badge } from "@/components/ui";
 
 export default function VerifyPayments() {
   const { selectedPerumahanId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   const fetchPendingPayments = useCallback(async () => {
     if (!selectedPerumahanId) return;
@@ -22,7 +23,7 @@ export default function VerifyPayments() {
         `)
         .eq("perumahan_id", selectedPerumahanId)
         .eq("status", "Pending")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
       setData(bills || []);
@@ -38,7 +39,11 @@ export default function VerifyPayments() {
   }, [fetchPendingPayments]);
 
   const handleAction = async (id, newStatus) => {
-    if (!window.confirm(`Konfirmasi pembayaran ini sebagai ${newStatus === 'Paid' ? 'LUNAS' : 'DITOLAK'}?`)) return;
+    const confirmMsg = newStatus === 'Paid' 
+      ? "Konfirmasi pembayaran ini sebagai LUNAS? Tindakan ini akan memperbarui status tagihan warga dan mencatatnya di Arus Kas."
+      : "Tolak konfirmasi ini? Warga harus melakukan konfirmasi ulang.";
+      
+    if (!window.confirm(confirmMsg)) return;
     
     try {
       const { error } = await supabase
@@ -47,12 +52,33 @@ export default function VerifyPayments() {
         .eq("id", id);
 
       if (error) throw error;
-      
-      alert(`Pembayaran berhasil ${newStatus === 'Paid' ? 'diverifikasi' : 'ditolak'}.`);
+
+      // Jika diverivikasi Lunas, otomatis masuk ke Arus Kas
+      if (newStatus === 'Paid') {
+        const bill = data.find(b => b.id === id);
+        if (bill) {
+          const { error: kasError } = await supabase.from('arus_kas').insert([{
+            perumahan_id: selectedPerumahanId,
+            tanggal: new Date().toISOString().split('T')[0],
+            keterangan: `Pembayaran Iuran: ${bill.warga?.nama || 'Warga'} (${bill.bulan}/${bill.tahun})`,
+            jumlah: bill.jumlah + (bill.unique_code || 0),
+            kategori: 'Pemasukan'
+          }]);
+          
+          if (kasError) console.error("Gagal mencatat arus kas:", kasError);
+        }
+      }
+
       fetchPendingPayments();
     } catch (err) {
-      alert("Gagal melakukan aksi: " + err.message);
+      alert("Gagal memproses verifikasi: " + err.message);
     }
+  };
+
+  const copyToClipboard = (text, id) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const filteredData = data.filter(item => 
@@ -62,130 +88,126 @@ export default function VerifyPayments() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Verifikasi Pembayaran</h1>
-          <p className="text-slate-500 text-sm">Validasi bukti transfer iuran dari warga.</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Verifikasi Pembayaran</h1>
+          <p className="text-slate-500 text-sm font-medium">Validasi konfirmasi transfer warga berdasarkan kode unik.</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-100">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Cari warga atau blok..."
+      <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100 flex gap-4 items-center">
+        <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center shrink-0">
+          <Info className="w-5 h-5 text-blue-600" />
+        </div>
+        <p className="text-xs text-blue-800 font-bold leading-relaxed">
+          Sistem menggunakan metode **Kode Unik**. Cukup cocokan nominal total di mutasi rekening Anda dengan daftar di bawah. Tidak perlu cek bukti transfer manual.
+        </p>
+      </div>
+
+      <Card noPadding>
+        <CardHeader 
+          title="Antrian Verifikasi" 
+          subtitle="Daftar warga yang telah melakukan konfirmasi transfer"
+          action={
+            <Input 
+              placeholder="Cari warga atau blok..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-600 transition-all"
+              icon={Search}
+              className="w-80"
             />
-          </div>
-        </div>
+          }
+        />
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Warga</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periode</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jumlah</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bukti</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {loading ? (
-                Array(3).fill(0).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td colSpan={5} className="px-6 py-4"><div className="h-5 bg-slate-100 rounded"></div></td>
-                  </tr>
-                ))
-              ) : filteredData.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-20 text-center text-slate-400 font-medium">Tidak ada pembayaran yang perlu diverifikasi.</td>
-                </tr>
-              ) : filteredData.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-all">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-amber-50 rounded flex items-center justify-center text-amber-600 text-xs font-bold uppercase">
-                        {item.warga?.nama?.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{item.warga?.nama}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.warga?.blok}</p>
-                      </div>
+        <Table>
+          <THead>
+            <TR isHeader>
+              <TH>Warga & Unit</TH>
+              <TH>Periode</TH>
+              <TH textAlign="right">Kode Unik</TH>
+              <TH textAlign="right">Total Transfer</TH>
+              <TH textAlign="right">Aksi Verifikasi</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {loading ? (
+              Array(4).fill(0).map((_, i) => (
+                <TR key={i}><TD colSpan={5}><div className="h-12 bg-slate-50 rounded-xl animate-pulse"></div></TD></TR>
+              ))
+            ) : filteredData.length === 0 ? (
+              <TR><TD colSpan={5} textAlign="center" className="py-24 text-xs font-bold tracking-[0.3em] text-slate-400">Antrian kosong. Tidak ada verifikasi pending.</TD></TR>
+            ) : filteredData.map((item) => (
+              <TR key={item.id} className="group">
+                <TD>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-slate-900 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-white group-hover:scale-110 transition-transform">
+                      {item.warga?.nama?.charAt(0)}
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span className="text-sm font-medium">{item.bulan}/{item.tahun}</span>
+                    <div className="flex flex-col">
+                      <p className="text-sm font-bold text-slate-900 tracking-tight">{item.warga?.nama}</p>
+                      <p className="text-xs font-bold text-slate-400 ">{item.warga?.blok}</p>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-bold text-slate-900">Rp {item.jumlah.toLocaleString()}</p>
-                  </td>
-                  <td className="px-6 py-4">
+                  </div>
+                </TD>
+                <TD className="text-slate-500 font-bold text-xs uppercase">
+                  {item.bulan}/{item.tahun}
+                </TD>
+                <TD textAlign="right">
+                  <Badge variant="slate" className="font-mono text-blue-600 px-3">
+                    {(item.unique_code || 0).toString().padStart(3, '0')}
+                  </Badge>
+                </TD>
+                <TD textAlign="right">
+                  <div className="flex items-center justify-end gap-2 group/total">
+                    <span className="text-sm font-bold text-slate-950 tracking-tight">
+                      Rp {(item.jumlah + (item.unique_code || 0)).toLocaleString('id-ID')}
+                    </span>
                     <button 
-                      onClick={() => setSelectedReceipt(item.bukti_bayar_url)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-all"
+                      type="button"
+                      onClick={() => copyToClipboard(item.jumlah + (item.unique_code || 0), item.id)}
+                      className="p-1.5 opacity-0 group-hover/total:opacity-100 hover:bg-slate-100 rounded-lg transition-all"
                     >
-                      <Eye className="w-3.5 h-3.5" /> Lihat Bukti
+                      {copiedId === item.id ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                     </button>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => handleAction(item.id, 'Unpaid')}
-                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" 
-                        title="Tolak Pembayaran"
-                      >
-                        <XCircle className="w-5 h-5" />
-                      </button>
-                      <button 
-                        onClick={() => handleAction(item.id, 'Paid')}
-                        className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" 
-                        title="Sahkan Lunas"
-                      >
-                        <CheckCircle className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </TD>
+                <TD textAlign="right">
+                  <div className="flex justify-end gap-3">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      icon={XCircle} 
+                      className="text-slate-400 hover:text-red-500 hover:bg-red-50" 
+                      onClick={() => handleAction(item.id, 'Unpaid')}
+                    />
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      icon={CheckCircle2} 
+                      className="px-6 rounded-xl shadow-none"
+                      onClick={() => handleAction(item.id, 'Paid')}
+                    >
+                      Verifikasi Lunas
+                    </Button>
+                  </div>
+                </TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </Card>
+
+      <div className="bg-amber-50 p-6 rounded-2xl border border-amber-100 flex gap-4 items-center">
+        <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center shrink-0">
+          <AlertCircle className="w-5 h-5 text-amber-600" />
+        </div>
+        <div className="space-y-1">
+          <h4 className="text-xs font-bold text-amber-700 uppercase tracking-widest">PENTING</h4>
+          <p className="text-xs text-amber-800 font-bold leading-relaxed">
+            Pastikan dana sudah benar-benar masuk ke rekening sebelum melakukan verifikasi Lunas. Verifikasi tidak dapat dibatalkan melalui UI.
+          </p>
         </div>
       </div>
-
-      {/* Lightbox for Receipt */}
-      {selectedReceipt && (
-        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-[100] flex items-center justify-center p-8">
-          <button 
-            onClick={() => setSelectedReceipt(null)}
-            className="absolute top-8 right-8 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all"
-          >
-            <XCircle className="w-8 h-8" />
-          </button>
-          <div className="max-w-4xl max-h-full flex flex-col items-center gap-4">
-            <img 
-              src={selectedReceipt} 
-              alt="Bukti Transfer" 
-              className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/20"
-            />
-            <a 
-              href={selectedReceipt} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-white/70 hover:text-white font-bold text-sm transition-all"
-            >
-              <ExternalLink className="w-4 h-4" /> Buka di Tab Baru
-            </a>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

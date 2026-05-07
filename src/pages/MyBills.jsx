@@ -1,265 +1,277 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { ReceiptText, Upload, Clock, CheckCircle2, AlertCircle, X, CreditCard } from "lucide-react";
+import { ReceiptText, CheckCircle2, AlertCircle, CreditCard, ChevronRight, Copy, Check } from "lucide-react";
+import { Button, Card, CardHeader, Table, THead, TBody, TR, TH, TD, Badge, Modal } from "@/components/ui";
 
 export default function MyBills() {
-  const { profile } = useAuth();
-  const [bills, setBills] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [selectedBill, setSelectedBill] = useState(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+ const { profile } = useAuth();
+ const [bills, setBills] = useState([]);
+ const [loading, setLoading] = useState(true);
+ const [config, setConfig] = useState(null);
+ const [selectedBill, setSelectedBill] = useState(null);
+ const [isDialogOpen, setIsDialogOpen] = useState(false);
+ const [isSubmitting, setIsSubmitting] = useState(false);
+ const [copied, setCopied] = useState(false);
 
-  const months = [
-    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-  ];
+ const months = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+ ];
 
-  const fetchBills = useCallback(async () => {
-    try {
-      setLoading(true);
-      if (!profile?.id) return;
-      
-      const { data, error } = await supabase
-        .from('tagihan')
-        .select('*')
-        .eq('warga_id', profile.id)
-        .order('tahun', { ascending: false })
-        .order('bulan', { ascending: false });
-      
-      if (error) throw error;
-      setBills(data || []);
-    } catch (error) {
-      console.error("Gagal memuat tagihan:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [profile?.id]);
+ const fetchData = useCallback(async () => {
+  try {
+   setLoading(true);
+   if (!profile?.id) return;
+   
+   // Fetch Config & Bills in parallel
+   const [billsRes, configRes] = await Promise.all([
+     supabase.from('tagihan').select('*').eq('warga_id', profile.id).order('tahun', { ascending: false }).order('bulan', { ascending: false }),
+     supabase.from('iuran_config').select('*').eq('perumahan_id', profile.perumahan_id).maybeSingle()
+   ]);
+   
+   if (billsRes.error) throw billsRes.error;
+   setBills(billsRes.data || []);
+   setConfig(configRes.data);
+  } catch (error) {
+   console.error("Gagal memuat data:", error.message);
+  } finally {
+   setLoading(false);
+  }
+ }, [profile?.id, profile?.perumahan_id]);
 
-  useEffect(() => {
-    fetchBills();
-  }, [fetchBills]);
+ useEffect(() => {
+  fetchData();
+ }, [fetchData]);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+ const handleConfirmPayment = async () => {
+  if (!selectedBill) return;
+  
+  try {
+   setIsSubmitting(true);
+   const { error } = await supabase
+    .from('tagihan')
+    .update({ status: 'Pending' })
+    .eq('id', selectedBill.id);
 
-    try {
-      setUploading(true);
-      
-      // Upload ke Storage Bucket 'receipts'
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.id}-${Date.now()}.${fileExt}`;
-      const filePath = `receipts/${fileName}`;
+   if (error) throw error;
 
-      const { error: uploadError } = await supabase.storage
-        .from('receipts')
-        .upload(filePath, file);
+   alert("Konfirmasi terkirim. Admin akan memverifikasi pembayaran Anda.");
+   setIsDialogOpen(false);
+   fetchData();
+  } catch (error) {
+   alert("Gagal konfirmasi: " + error.message);
+  } finally {
+   setIsSubmitting(false);
+  }
+ };
 
-      if (uploadError) throw uploadError;
+ const copyToClipboard = (text) => {
+   navigator.clipboard.writeText(text);
+   setCopied(true);
+   setTimeout(() => setCopied(false), 2000);
+ };
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('receipts')
-        .getPublicUrl(filePath);
+ return (
+  <div className="max-w-full mx-auto flex flex-col gap-8">
+   <div className="flex justify-between items-end">
+    <div>
+     <h1 className="text-xl font-bold text-slate-900 tracking-tight">Tagihan Saya</h1>
+     <p className="text-slate-500 text-sm font-medium">Pantau status iuran bulanan Anda.</p>
+    </div>
+    <div className="text-right flex flex-col items-end gap-1">
+     <p className="text-xs font-bold text-slate-400 ">Luas Tanah Anda</p>
+     <Badge variant="slate" className="text-sm px-5 py-2.5">{profile?.luas_tanah || 0} m²</Badge>
+    </div>
+   </div>
 
-      // Update tabel tagihan
-      const { error: updateError } = await supabase
-        .from('tagihan')
-        .update({ 
-          bukti_bayar_url: publicUrl,
-          status: 'Pending'
-        })
-        .eq('id', selectedBill.id);
+   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <Card className="flex items-center gap-6 p-8 relative overflow-hidden group">
+     <div className="w-10 h-10 bg-green-50 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-green-600 group-hover:scale-110 transition-transform">
+      <CheckCircle2 className="w-5 h-5" />
+     </div>
+     <div className="space-y-1">
+      <p className="text-xs font-bold text-slate-400 ">Status Saat Ini</p>
+      <p className="text-2xl font-bold text-slate-900 tracking-tight">
+       {bills.some(b => b.status === 'Unpaid') ? 'Ada Tunggakan' : 'Lancar'}
+      </p>
+     </div>
+     <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-green-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    </Card>
 
-      if (updateError) throw updateError;
+    <Card className="flex items-center gap-6 p-8 relative overflow-hidden group">
+     <div className="w-10 h-10 bg-red-50 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-red-500 group-hover:scale-110 transition-transform">
+      <ReceiptText className="w-5 h-5" />
+     </div>
+     <div className="space-y-1">
+      <p className="text-xs font-bold text-slate-400 ">Tagihan Belum Bayar</p>
+      <p className="text-2xl font-bold text-red-500 tracking-tight">
+       {bills.filter(b => b.status === 'Unpaid').length} Bulan
+      </p>
+     </div>
+     <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-red-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    </Card>
+   </div>
 
-      alert("Bukti bayar telah dikirim. Menunggu verifikasi admin.");
-      setIsDialogOpen(false);
-      fetchBills();
-    } catch (error) {
-      alert("Gagal upload: " + error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div className="bg-transparent">
-      <div className="flex flex-col gap-6 max-w-4xl mx-auto">
-        <div className="flex justify-between items-end">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Tagihan Saya</h1>
-            <p className="text-slate-500 text-sm font-medium">Pantau status iuran bulanan Anda.</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Luas Tanah Anda</p>
-            <p className="text-sm font-bold text-slate-900">{profile?.luas_tanah || 0} m²</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-green-600">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status Saat Ini</p>
-              <p className="text-xl font-bold text-slate-900">
-                {bills.some(b => b.status === 'Unpaid') ? 'Ada Tunggakan' : 'Lancar'}
-              </p>
-            </div>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center text-red-500">
-              <ReceiptText className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Tagihan Belum Dibayar</p>
-              <p className="text-xl font-bold text-red-500">
-                {bills.filter(b => b.status === 'Unpaid').length} Bulan
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Bank Account Info */}
-        <div className="bg-indigo-600 p-6 rounded-2xl text-white shadow-lg shadow-indigo-100 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-              <CreditCard className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold opacity-70 uppercase tracking-widest">Rekening Pembayaran</p>
-              <p className="text-lg font-bold">Bank Mandiri: 123-456-7890</p>
-              <p className="text-xs opacity-80">A/N Paguyuban Cendana Residence</p>
-            </div>
-          </div>
-          <div className="bg-white/10 px-4 py-2 rounded-lg border border-white/20 text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">Butuh Bantuan?</p>
-            <p className="text-sm font-bold">Hubungi Admin</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bulan</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jumlah</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  Array(3).fill(0).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td colSpan={4} className="px-6 py-8"><div className="h-5 bg-slate-100 rounded"></div></td>
-                    </tr>
-                  ))
-                ) : bills.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-20 text-center text-slate-400 font-medium font-bold uppercase tracking-widest text-xs">Belum ada tagihan terbit.</td>
-                  </tr>
-                ) : bills.map((bill) => (
-                  <tr key={bill.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-all">
-                    <td className="px-6 py-5 text-sm font-bold text-slate-900">{months[bill.bulan-1]} {bill.tahun}</td>
-                    <td className="px-6 py-5 text-sm font-bold text-slate-900">Rp {bill.jumlah.toLocaleString('id-ID')}</td>
-                    <td className="px-6 py-5">
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        bill.status === 'Paid' ? 'bg-green-50 text-green-600' :
-                        bill.status === 'Pending' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-500'
-                      }`}>
-                        {bill.status === 'Paid' ? <CheckCircle2 className="w-3 h-3" /> : 
-                         bill.status === 'Pending' ? <Clock className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                        {bill.status === 'Paid' ? 'Lunas' : bill.status === 'Pending' ? 'Verifikasi' : 'Belum Bayar'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      {bill.status === 'Unpaid' && (
-                        <button 
-                          onClick={() => {
-                            setSelectedBill(bill);
-                            setIsDialogOpen(true);
-                          }}
-                          className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
-                        >
-                          Bayar
-                        </button>
-                      )}
-                      {bill.status === 'Pending' && (
-                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Proses Admin</span>
-                      )}
-                      {bill.status === 'Paid' && (
-                        <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Selesai</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Modal Upload Bukti Bayar */}
-      {isDialogOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-lg font-bold text-slate-900">Konfirmasi Pembayaran</h3>
-              <button onClick={() => setIsDialogOpen(false)} className="text-slate-400 hover:text-slate-600 p-2">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-8 flex flex-col gap-6">
-              <div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 flex gap-4">
-                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
-                  <AlertCircle className="w-5 h-5 text-amber-600" />
-                </div>
-                <p className="text-xs text-amber-800 font-bold leading-relaxed">
-                  Pastikan nominal transfer sesuai dengan tagihan agar proses verifikasi lebih cepat.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pilih Foto Bukti Transfer</label>
-                <label className="group relative cursor-pointer">
-                  <div className={`w-full h-32 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${
-                    uploading ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-200 hover:bg-indigo-50 hover:border-indigo-200'
-                  }`}>
-                    {uploading ? (
-                      <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        <Upload className="w-6 h-6 text-slate-400 group-hover:text-indigo-600" />
-                        <span className="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase tracking-widest">Klik untuk Pilih File</span>
-                      </>
-                    )}
-                  </div>
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleFileUpload}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-            </div>
-            <div className="p-6 border-t border-slate-100 flex justify-end">
-              <button 
-                onClick={() => setIsDialogOpen(false)}
-                className="px-6 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
+   {/* Bank Account Info Card */}
+   <div className="bg-slate-950 p-8 rounded-2xl text-white shadow-none flex flex-col lg:flex-row justify-between items-center gap-8 relative overflow-hidden group">
+    <div className="absolute -left-10 -top-6 w-48 h-48 bg-white/5 rounded-full blur-3xl group-hover:bg-white/10 transition-all"></div>
+    <div className="flex items-center gap-6 relative z-10">
+     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 shadow-none">
+      <CreditCard className="w-6 h-6" />
+     </div>
+     <div className="space-y-1">
+      <p className="text-xs font-bold text-white/40 tracking-wider">TUJUAN PEMBAYARAN</p>
+      {config?.rekening_no ? (
+        <>
+          <p className="text-xl font-bold tracking-tight">{config.rekening_bank}: <span className="text-white/60">{config.rekening_no}</span></p>
+          <p className="text-xs font-bold text-white/50 ">A/N {config.rekening_nama}</p>
+        </>
+      ) : (
+        <p className="text-xl font-bold tracking-tight">Menunggu informasi dari Admin</p>
+      )}
+     </div>
+    </div>
+    <div className="flex items-center gap-4 relative z-10 w-full lg:w-auto">
+      {config?.qris_url && (
+        <div className="hidden lg:block p-2 bg-white rounded-xl shadow-none">
+          <img src={config.qris_url} alt="QRIS" className="w-16 h-16 object-contain" />
         </div>
       )}
+     <Button variant="outline" className="flex-1 lg:flex-none bg-white text-slate-950 border-none hover:bg-slate-100 px-8 py-3 font-bold">
+      Bantuan Admin
+     </Button>
     </div>
-  );
+   </div>
+
+   <Card noPadding>
+    <CardHeader title="Riwayat Tagihan" subtitle="Detail iuran bulanan Anda" />
+    <Table>
+     <THead>
+      <TR isHeader>
+       <TH>Bulan Periode</TH>
+       <TH>Jumlah + Kode Unik</TH>
+       <TH>Total Transfer</TH>
+       <TH>Status Pembayaran</TH>
+       <TH textAlign="right">Aksi</TH>
+      </TR>
+     </THead>
+     <TBody>
+      {loading ? (
+       Array(3).fill(0).map((_, i) => (
+        <TR key={i}><TD colSpan={5}><div className="h-5 bg-slate-50 rounded-lg animate-pulse"></div></TD></TR>
+       ))
+      ) : bills.length === 0 ? (
+       <TR>
+        <TD colSpan={5} textAlign="center" className="py-20 text-slate-400 font-bold text-xs">Belum ada tagihan terbit.</TD>
+       </TR>
+      ) : bills.map((bill) => (
+       <TR key={bill.id}>
+        <TD className="text-sm font-bold text-slate-900">{months[bill.bulan-1]} {bill.tahun}</TD>
+        <TD className="text-sm font-bold text-slate-500">
+          Rp {bill.jumlah.toLocaleString('id-ID')} + <span className="text-blue-600">{(bill.unique_code || 0).toString().padStart(3, '0')}</span>
+        </TD>
+        <TD className="text-sm font-bold text-slate-950 tracking-tight">
+          Rp {(bill.jumlah + (bill.unique_code || 0)).toLocaleString('id-ID')}
+        </TD>
+        <TD>
+         <Badge variant={
+          bill.status === 'Paid' ? 'green' :
+          bill.status === 'Pending' ? 'orange' : 'red'
+         }>
+          {bill.status === 'Paid' ? 'Lunas' : bill.status === 'Pending' ? 'Verifikasi' : 'Belum Bayar'}
+         </Badge>
+        </TD>
+        <TD textAlign="right">
+         {bill.status === 'Unpaid' ? (
+          <Button 
+           variant="primary" 
+           size="sm" 
+           onClick={() => {
+            setSelectedBill(bill);
+            setIsDialogOpen(true);
+           }}
+          >
+           Bayar Sekarang
+          </Button>
+         ) : (
+          <Button variant="ghost" size="sm" icon={ChevronRight} className="text-slate-300 pointer-events-none" />
+         )}
+        </TD>
+       </TR>
+      ))}
+     </TBody>
+    </Table>
+   </Card>
+
+   {/* Modal Konfirmasi Pembayaran */}
+   <Modal
+    isOpen={isDialogOpen}
+    onClose={() => setIsDialogOpen(false)}
+    title="Instruksi Pembayaran"
+   >
+    <div className="space-y-8">
+     <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 flex gap-4">
+      <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center shrink-0">
+       <AlertCircle className="w-5 h-5 text-blue-600" />
+      </div>
+      <div className="space-y-1">
+       <h4 className="text-xs font-bold text-blue-700 ">Info Penting</h4>
+       <p className="text-xs text-blue-800 font-bold leading-relaxed">
+        Mohon transfer tepat sampai 3 digit terakhir agar sistem dapat mendeteksi pembayaran Anda secara otomatis.
+       </p>
+      </div>
+     </div>
+
+     {selectedBill && (
+      <div className="space-y-6">
+        <div className="text-center p-8 bg-slate-50 rounded-2xl border border-slate-100">
+          <p className="text-xs font-bold text-slate-400 mb-2 tracking-widest uppercase">TOTAL TRANSFER</p>
+          <div className="flex items-center justify-center gap-3">
+            <h2 className="text-4xl font-bold text-slate-950 tracking-tighter">
+              Rp {(selectedBill.jumlah + (selectedBill.unique_code || 0)).toLocaleString('id-ID')}
+            </h2>
+            <button onClick={() => copyToClipboard(selectedBill.jumlah + (selectedBill.unique_code || 0))} className="p-2 hover:bg-slate-200 rounded-lg transition-colors">
+              {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5 text-slate-400" />}
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-6 border border-slate-100 rounded-2xl space-y-1">
+            <p className="text-[10px] font-bold text-slate-400 uppercase">BANK TUJUAN</p>
+            <p className="text-sm font-bold text-slate-900">{config?.rekening_bank || '-'}</p>
+          </div>
+          <div className="p-6 border border-slate-100 rounded-2xl space-y-1">
+            <p className="text-[10px] font-bold text-slate-400 uppercase">NOMOR REKENING</p>
+            <p className="text-sm font-bold text-slate-900">{config?.rekening_no || '-'}</p>
+          </div>
+        </div>
+
+        {config?.qris_url && (
+          <div className="flex flex-col items-center gap-4 p-6 border border-slate-100 rounded-2xl bg-white">
+            <p className="text-[10px] font-bold text-slate-400 uppercase">ATAU SCAN QRIS</p>
+            <img src={config.qris_url} alt="QRIS" className="w-48 h-48 object-contain" />
+          </div>
+        )}
+
+        <div className="pt-4 space-y-4">
+          <Button 
+            variant="primary" 
+            className="w-full py-4 text-sm font-bold"
+            isLoading={isSubmitting}
+            onClick={handleConfirmPayment}
+          >
+            Saya Sudah Transfer
+          </Button>
+          <p className="text-[10px] text-center text-slate-400 font-medium">
+            Dengan mengklik tombol di atas, Anda menyatakan telah mengirim dana sesuai nominal.
+          </p>
+        </div>
+      </div>
+     )}
+    </div>
+   </Modal>
+  </div>
+ );
 }

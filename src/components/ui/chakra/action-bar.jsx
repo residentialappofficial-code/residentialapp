@@ -3,29 +3,29 @@ import { CloseButton } from './close-button'
 import * as React from 'react'
 
 export const ActionBarContent = React.forwardRef(
-  function ActionBarContent(props, ref) {
-    const { children, portalled = true, portalRef, ...rest } = props
+ function ActionBarContent(props, ref) {
+  const { children, portalled = true, portalRef, ...rest } = props
 
-    return (
-      <Portal disabled={!portalled} container={portalRef}>
-        <ActionBar.Positioner>
-          <ActionBar.Content ref={ref} {...rest} asChild={false}>
-            {children}
-          </ActionBar.Content>
-        </ActionBar.Positioner>
-      </Portal>
-    )
-  },
+  return (
+   <Portal disabled={!portalled} container={portalRef}>
+    <ActionBar.Positioner>
+     <ActionBar.Content ref={ref} {...rest} asChild={false}>
+      {children}
+     </ActionBar.Content>
+    </ActionBar.Positioner>
+   </Portal>
+  )
+ },
 )
 
 export const ActionBarCloseTrigger = React.forwardRef(
-  function ActionBarCloseTrigger(props, ref) {
-    return (
-      <ActionBar.CloseTrigger {...props} asChild ref={ref}>
-        <CloseButton size='sm' />
-      </ActionBar.CloseTrigger>
-    )
-  },
+ function ActionBarCloseTrigger(props, ref) {
+  return (
+   <ActionBar.CloseTrigger {...props} asChild ref={ref}>
+    <CloseButton size='sm' />
+   </ActionBar.CloseTrigger>
+  )
+ },
 )
 
 export const ActionBarRoot = ActionBar.Root
