@@ -8,6 +8,7 @@ export const PasswordInput = ({
   error, 
   strength, 
   placeholder = "••••••••",
+  className = "",
   ...props 
 }) => {
   const [show, setShow] = useState(false);
@@ -35,14 +36,15 @@ export const PasswordInput = ({
           type={show ? "text" : "password"}
           value={value}
           onChange={onChange}
+          {...props}
           className={`
             block w-full pl-11 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900
             focus:outline-none focus:border-slate-900 focus:bg-white focus:ring-4 focus:ring-slate-900/5
             transition-all placeholder:text-slate-300
             ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : ''}
+            ${className}
           `}
           placeholder={placeholder}
-          {...props}
         />
         <button
           type="button"

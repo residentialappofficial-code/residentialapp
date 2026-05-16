@@ -24,6 +24,7 @@ export const Input = ({
           </div>
         )}
         <input
+          {...props}
           className={`
             block w-full py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900
             focus:outline-none focus:border-slate-900 focus:bg-white focus:ring-4 focus:ring-slate-900/5
@@ -32,7 +33,6 @@ export const Input = ({
             ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : ''}
             ${otherClasses}
           `}
-          {...props}
         />
       </div>
       {error && (
@@ -58,6 +58,7 @@ export const Textarea = ({
         </label>
       )}
       <textarea
+        {...props}
         className={`
           block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900
           focus:outline-none focus:border-slate-900 focus:bg-white focus:ring-4 focus:ring-slate-900/5
@@ -65,7 +66,6 @@ export const Textarea = ({
           ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : ''}
           ${className}
         `}
-        {...props}
       />
       {error && (
         <p className="text-[10px] font-bold text-red-500 mt-0.5 ml-1">
