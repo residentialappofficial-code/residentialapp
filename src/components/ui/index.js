@@ -3,5 +3,8 @@ export * from './Input';
 export * from './Card';
 export * from './Badge';
 export * from './Modal';
+export * from './ConfirmModal';
 export * from './Table';
 export * from './Select';
+export * from './PasswordInput';
+export * from './StatCard';

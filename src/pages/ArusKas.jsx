@@ -2,37 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { Plus, TrendingUp, TrendingDown, WalletCards, Search, MoreVertical, Filter, FileText, Edit, Trash2, ArrowUpRight, ArrowDownRight, Activity, DollarSign, PieChart, Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal } from "@/components/ui";
+import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal, Select, StatCard } from "@/components/ui";
 import { SelectionRequired } from "@/components/ui/SelectionRequired";
 
-const CashflowStatCard = ({ title, value, icon: Icon, type = "neutral" }) => {
-  const styles = {
-    neutral: "bg-slate-950 text-white border border-slate-900 shadow-none",
-    success: "bg-green-50 text-green-600 border border-green-100 shadow-none",
-    danger: "bg-red-50 text-red-600 border border-red-100 shadow-none",
-  };
 
-  return (
-    <Card className="relative overflow-hidden group">
-      <div className="flex flex-col gap-8">
-        <div className="flex justify-between items-start">
-          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] ${styles[type]}  transition-transform group-hover:scale-110 duration-300`}>
-            <Icon className="w-5 h-5" />
-          </div>
-        </div>
-        
-        <div className="space-y-1">
-          <h3 className="text-xl font-bold text-slate-900 tracking-tighter">
-            <span className="text-sm font-bold mr-1 opacity-40">Rp</span>
-            {value.toLocaleString()}
-          </h3>
-          <p className="text-xs font-bold text-slate-400">{title}</p>
-        </div>
-      </div>
-      <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-slate-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-    </Card>
-  );
-};
 
 export default function ArusKas() {
   const { selectedPerumahanId, profile } = useAuth();
@@ -171,27 +144,29 @@ export default function ArusKas() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Arus Kas & Keuangan</h1>
-          <p className="text-slate-500 text-sm font-medium">Pantau seluruh pemasukan dan pengeluaran operasional perumahan.</p>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Arus Kas & Keuangan</h1>
+          <p className="text-slate-500 text-sm mt-1">Pantau seluruh pemasukan dan pengeluaran operasional perumahan.</p>
         </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" icon={FileText} onClick={handleExportCSV} className="text-slate-400 font-bold hover:bg-slate-50">Ekspor Laporan</Button>
-          <Button variant="primary" size="lg" icon={Plus} className="px-10  shadow-none" onClick={() => {
-            setIsEditMode(false);
-            setEditingId(null);
-            setFormData({ tanggal: new Date().toISOString().split('T')[0], keterangan: "", kategori: "Pemasukan", jumlah: 0 });
-            setIsModalOpen(true);
-          }}>Input Transaksi</Button>
-        </div>
+        {profile?.role !== 'warga' && (
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" icon={FileText} onClick={handleExportCSV} className="text-slate-500 font-semibold hover:bg-slate-50">Ekspor Laporan</Button>
+            <Button variant="primary" size="md" icon={Plus} onClick={() => {
+              setIsEditMode(false);
+              setEditingId(null);
+              setFormData({ tanggal: new Date().toISOString().split('T')[0], keterangan: "", kategori: "Pemasukan", jumlah: 0 });
+              setIsModalOpen(true);
+            }}>Input Transaksi</Button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <CashflowStatCard title="Total Pemasukan" value={summary.masuk} icon={ArrowUpRight} type="success" />
-        <CashflowStatCard title="Total Pengeluaran" value={summary.keluar} icon={ArrowDownRight} type="danger" />
-        <CashflowStatCard title="Saldo Kas Saat Ini" value={summary.saldo} icon={WalletCards} type="neutral" />
+        <StatCard title="Total Pemasukan" value={`Rp ${summary.masuk.toLocaleString()}`} icon={ArrowUpRight} isPositive={true} change="Uang Masuk" />
+        <StatCard title="Total Pengeluaran" value={`Rp ${summary.keluar.toLocaleString()}`} icon={ArrowDownRight} isPositive={false} change="Uang Keluar" />
+        <StatCard title="Saldo Kas Saat Ini" value={`Rp ${summary.saldo.toLocaleString()}`} icon={WalletCards} isPositive={summary.saldo >= 0} change="Saldo Efektif" />
       </div>
 
       <Card noPadding>
@@ -207,7 +182,6 @@ export default function ArusKas() {
                 icon={Search}
                 className="w-80"
               />
-              <Button variant="ghost" icon={Filter} size="sm" className="text-slate-400" />
             </div>
           }
         />
@@ -219,43 +193,45 @@ export default function ArusKas() {
               <TH>Keterangan</TH>
               <TH>Klasifikasi</TH>
               <TH textAlign="right">Jumlah</TH>
-              <TH textAlign="right">Aksi</TH>
+              {profile?.role !== 'warga' && <TH textAlign="right">Aksi</TH>}
             </TR>
           </THead>
           <TBody>
             {loading ? (
               Array(6).fill(0).map((_, i) => (
-                <TR key={i}><TD colSpan={5}><div className="h-12 bg-slate-50 rounded-xl animate-pulse"></div></TD></TR>
+                <TR key={i}><TD colSpan={5}><div className="h-16 bg-slate-50/50 rounded-2xl animate-pulse"></div></TD></TR>
               ))
             ) : filteredData.length === 0 ? (
               <TR>
-                <TD colSpan={5} textAlign="center" className="py-24 text-xs font-bold tracking-[0.3em] text-slate-400">Tidak ada data transaksi ditemukan.</TD>
+                <TD colSpan={5} textAlign="center" className="py-24 text-[10px] font-bold tracking-[0.3em] text-slate-400 uppercase">Tidak ada data transaksi ditemukan.</TD>
               </TR>
             ) : filteredData.map((item) => (
               <TR key={item.id} className="group">
-                <TD className="text-xs font-bold text-slate-400 ">
+                <TD className="text-xs font-medium text-slate-500">
                   {new Date(item.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </TD>
                 <TD>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-slate-900 tracking-tight">{item.keterangan}</span>
-                    <span className="text-[9px] font-bold text-slate-400 ">TXN: {item.id.substring(0, 12)}</span>
+                    <span className="text-sm font-semibold text-slate-900 tracking-tight">{item.keterangan}</span>
+                    <span className="text-[10px] font-medium text-slate-400 mt-0.5">TXN: {item.id.substring(0, 12)}</span>
                   </div>
                 </TD>
                 <TD>
-                  <Badge variant={item.kategori === "Pemasukan" ? 'green' : 'red'} className="font-bold">
-                    {item.kategori === "Pemasukan" ? 'PEMASUKAN' : 'PENGELUARAN'}
+                  <Badge variant={item.kategori === "Pemasukan" ? 'green' : 'red'}>
+                    {item.kategori === "Pemasukan" ? 'Pemasukan' : 'Pengeluaran'}
                   </Badge>
                 </TD>
                 <TD className={`text-sm font-bold text-right tracking-tight ${item.kategori === "Pemasukan" ? 'text-emerald-600' : 'text-rose-600'}`}>
                   {item.kategori === "Pemasukan" ? '+' : '-'} Rp {item.jumlah?.toLocaleString()}
                 </TD>
-                <TD textAlign="right">
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="sm" icon={Edit} onClick={() => handleEdit(item)} className="text-slate-400 hover:text-slate-950" />
-                    <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-red-500" />
-                  </div>
-                </TD>
+                {profile?.role !== 'warga' && (
+                  <TD textAlign="right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" icon={Edit} onClick={() => handleEdit(item)} className="text-slate-400 hover:text-slate-950 hover:bg-slate-50" />
+                      <Button variant="ghost" size="sm" icon={Trash2} onClick={() => handleDelete(item.id)} className="text-slate-300 hover:text-red-500 hover:bg-red-50" />
+                    </div>
+                  </TD>
+                )}
               </TR>
             ))}
           </TBody>
@@ -267,15 +243,15 @@ export default function ArusKas() {
         onClose={() => setIsModalOpen(false)} 
         title={isEditMode ? "Ubah Transaksi" : "Input Transaksi Baru"}
       >
-        <div className="space-y-10 p-2">
-          <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-            <div className="w-10 h-10 bg-slate-950 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] text-white ">
+        <div className="space-y-8 p-2">
+          <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-xl border border-slate-100">
+            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shrink-0">
               <Activity className="w-5 h-5" />
             </div>
-            <p className="text-xs text-slate-500 font-bold leading-relaxed">Pastikan seluruh nominal yang dimasukkan telah sesuai dengan bukti fisik transaksi.</p>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">Pastikan seluruh nominal yang dimasukkan telah sesuai dengan bukti fisik transaksi.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 gap-6">
             <Input 
               label="Tanggal Transaksi"
               type="date"
@@ -284,25 +260,14 @@ export default function ArusKas() {
               onChange={(e) => setFormData({...formData, tanggal: e.target.value})}
               icon={Calendar}
             />
-            <div className="flex flex-col gap-3">
-              <label className="text-xs font-bold text-slate-400  ml-1">Tipe Aliran Dana</label>
-              <div className="grid grid-cols-2 gap-3">
-                {['Pemasukan', 'Pengeluaran'].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setFormData({...formData, kategori: t})}
-                    className={`py-4 rounded-2xl text-xs font-bold  transition-all border-2 ${
-                      formData.kategori === t 
-                        ? 'bg-slate-950 border-slate-950 text-white ' 
-                        : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <Select 
+              label="Tipe Aliran Dana"
+              value={formData.kategori}
+              onChange={(e) => setFormData({...formData, kategori: e.target.value})}
+            >
+              <option value="Pemasukan">Pemasukan (Uang Masuk)</option>
+              <option value="Pengeluaran">Pengeluaran (Uang Keluar)</option>
+            </Select>
           </div>
           
           <Input 
@@ -325,8 +290,8 @@ export default function ArusKas() {
           />
 
           <div className="flex gap-4 pt-6">
-            <Button variant="ghost" className="flex-1 py-3 font-bold  text-xs" onClick={() => setIsModalOpen(false)}>Batal</Button>
-            <Button variant="primary" className="flex-1 py-3  shadow-none font-bold  text-xs" onClick={handleAddTransaction} isLoading={isSubmitting}>
+            <Button variant="ghost" className="flex-1 py-2.5 font-semibold" onClick={() => setIsModalOpen(false)}>Batal</Button>
+            <Button variant="primary" className="flex-1 py-2.5 font-semibold" onClick={handleAddTransaction} isLoading={isSubmitting}>
               {isEditMode ? "Simpan Perubahan" : "Konfirmasi Transaksi"}
             </Button>
           </div>

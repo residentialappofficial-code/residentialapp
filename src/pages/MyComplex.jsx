@@ -1,169 +1,197 @@
 import { useState, useEffect } from "react";
-import { Building2, Save, MapPin, Globe, Phone, Info, CheckCircle2 } from "lucide-react";
+import { Building2, Save, MapPin, Info, ShieldCheck, Globe, Users, ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button, Input, Card, CardHeader, Badge } from "@/components/ui";
+import { Button, Input, Card, CardHeader, Badge, Textarea } from "@/components/ui";
 
 export default function MyComplex() {
- const { selectedPerumahanId } = useAuth();
- const [loading, setLoading] = useState(true);
- const [saving, setSaving] = useState(false);
- const [complex, setComplex] = useState({
-  nama: "",
-  alamat: "",
-  status: "active"
- });
+  const { selectedPerumahanId } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [complex, setComplex] = useState({
+    nama: "",
+    alamat: "",
+    status: "active"
+  });
 
- useEffect(() => {
-  async function fetchComplexData() {
-   if (!selectedPerumahanId) return;
-   try {
-    setLoading(true);
-    const { data, error } = await supabase
-     .from('perumahan')
-     .select('*')
-     .eq('id', selectedPerumahanId)
-     .single();
+  useEffect(() => {
+    async function fetchComplexData() {
+      if (!selectedPerumahanId) return;
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('perumahan')
+          .select('*')
+          .eq('id', selectedPerumahanId)
+          .single();
 
-    if (error) throw error;
-    if (data) setComplex(data);
-   } catch (error) {
-    console.error("Gagal memuat data komplek:", error);
-   } finally {
-    setLoading(false);
-   }
+        if (error) throw error;
+        if (data) setComplex(data);
+      } catch (error) {
+        console.error("Gagal memuat data komplek:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchComplexData();
+  }, [selectedPerumahanId]);
+
+  const handleSave = async (e) => {
+    if (e) e.preventDefault();
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('perumahan')
+        .update({
+          nama: complex.nama,
+          alamat: complex.alamat
+        })
+        .eq('id', selectedPerumahanId);
+
+      if (error) throw error;
+      alert("Data komplek berhasil diperbarui!");
+    } catch (error) {
+      alert("Gagal menyimpan: " + error.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-6">
+        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Memuat Data HABITIX...</p>
+      </div>
+    );
   }
-  fetchComplexData();
- }, [selectedPerumahanId]);
 
- const handleSave = async (e) => {
-  if (e) e.preventDefault();
-  setSaving(true);
-  try {
-   const { error } = await supabase
-    .from('perumahan')
-    .update({
-     nama: complex.nama,
-     alamat: complex.alamat
-    })
-    .eq('id', selectedPerumahanId);
-
-   if (error) throw error;
-   alert("Data komplek berhasil diperbarui!");
-  } catch (error) {
-   alert("Gagal menyimpan: " + error.message);
-  } finally {
-   setSaving(false);
-  }
- };
-
- if (loading) {
   return (
-   <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-    <div className="w-10 h-10 border-4 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
-    <p className="text-xs font-bold text-slate-400 ">Memuat Data Komplek...</p>
-   </div>
+    <div className="max-w-full mx-auto flex flex-col gap-10">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Profil Komplek</h1>
+          <p className="text-slate-500 text-sm mt-1">Konfigurasi entitas dan identitas publik perumahan Anda.</p>
+        </div>
+        <Button 
+          variant="primary" 
+          onClick={handleSave} 
+          isLoading={saving}
+          icon={Save}
+          size="lg"
+          className="px-12 font-bold rounded-2xl shadow-indigo-200 shadow-xl"
+        >
+          Simpan Perubahan
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Left Col: Info Card */}
+        <div className="lg:col-span-4 flex flex-col gap-10">
+          <Card noPadding className="text-center overflow-hidden !rounded-2xl border-none shadow-xl shadow-slate-200 group">
+            <div className="h-32 bg-indigo-50/50 transition-all group-hover:h-36 duration-700 relative overflow-hidden">
+               <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500 via-transparent to-transparent"></div>
+            </div>
+            <div className="relative flex flex-col items-center p-10 -mt-16">
+              <div className="w-32 h-32 bg-white p-2 rounded-2xl mb-6 relative z-10 shadow-2xl shadow-slate-950/10 group-hover:scale-105 transition-transform duration-700">
+                <div className="w-full h-full bg-slate-50 rounded-2xl flex items-center justify-center text-slate-900">
+                  <Building2 className="w-12 h-12" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-4">{complex.nama}</h3>
+              <div className="flex items-center gap-2 px-6 py-2 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">
+                <ShieldCheck className="w-4 h-4" />
+                {complex.status || 'Active'}
+              </div>
+            </div>
+          </Card>
+
+          <Card className="!rounded-2xl border-none shadow-xl shadow-slate-200">
+            <div className="p-10 flex flex-col gap-10">
+              <div className="space-y-8">
+                <div className="flex flex-col gap-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Complex ID</p>
+                  <p className="text-xs font-mono font-bold text-slate-900 break-all p-3 bg-slate-50 rounded-xl">{selectedPerumahanId}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-6">
+                   <div className="flex flex-col gap-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital Status</p>
+                      <HStack gap={2}>
+                         <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                         <span className="text-xs font-bold text-slate-900">Online</span>
+                      </HStack>
+                   </div>
+                   <div className="flex flex-col gap-1">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified</p>
+                      <HStack gap={2}>
+                         <CheckCircle2 size={14} className="text-indigo-600" />
+                         <span className="text-xs font-bold text-slate-900">Yes</span>
+                      </HStack>
+                   </div>
+                </div>
+
+                <Button 
+                   variant="outline" 
+                   className="w-full justify-between rounded-xl py-6 font-bold text-xs uppercase tracking-widest text-slate-400 hover:text-slate-900 hover:border-slate-300"
+                   iconRight={ArrowUpRight}
+                >
+                   View Public Page
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Right Col: Edit Form */}
+        <div className="lg:col-span-8">
+          <Card hFull noPadding className="border-none shadow-2xl shadow-slate-200">
+            <CardHeader title="Informasi Entitas" subtitle="Detail administratif perumahan yang diakui secara sistem" />
+            <div className="p-8 md:p-10 space-y-8">
+              <div className="grid grid-cols-1 gap-8">
+                <Input 
+                  label="Nama Resmi Perumahan"
+                  value={complex.nama} 
+                  onChange={(e) => setComplex({...complex, nama: e.target.value})}
+                  placeholder="Contoh: HABITIX Residence..."
+                  icon={Building2}
+                />
+
+                <Textarea 
+                  label="Alamat Operasional & Tagihan"
+                  value={complex.alamat}
+                  onChange={(e) => setComplex({...complex, alamat: e.target.value})}
+                  placeholder="Alamat lengkap komplek..."
+                  className="min-h-[160px]"
+                />
+              </div>
+
+              <div className="pt-10 border-t border-slate-50">
+                <div className="bg-indigo-50/30 p-10 rounded-2xl border border-indigo-100 flex gap-8 items-start relative overflow-hidden group">
+                  <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-1000"></div>
+                  <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-100 text-white">
+                    <Info className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1 relative z-10">
+                    <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">Integritas Data Publik</h4>
+                    <p className="text-sm text-indigo-950 font-bold leading-relaxed tracking-tight">
+                      Informasi ini bersifat publik. Seluruh warga dan sistem penagihan akan merujuk pada alamat dan nama yang tertera di sini. Harap gunakan data legal yang valid.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
- }
+}
 
- return (
-  <div className="max-w-full mx-auto flex flex-col gap-6">
-   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-    <div>
-     <h1 className="text-xl font-bold text-slate-900 tracking-tight">Profil Komplek</h1>
-     <p className="text-slate-500 text-sm font-medium">Kelola informasi publik dan identitas perumahan Anda.</p>
+function HStack({ children, gap = 2, ...props }) {
+  return (
+    <div className={`flex items-center gap-${gap}`} {...props}>
+      {children}
     </div>
-    <Button 
-     variant="primary" 
-     onClick={handleSave} 
-     isLoading={saving}
-     icon={Save}
-     size="lg"
-    >
-     Simpan Perubahan
-    </Button>
-   </div>
-
-   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-    {/* Left Col: Info Card */}
-    <div className="lg:col-span-4 flex flex-col gap-8">
-     <Card className="text-center p-6 relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-24 bg-slate-950"></div>
-      <div className="relative flex flex-col items-center">
-       <div className="w-28 h-28 bg-white p-1 rounded-xl  mb-6 relative z-10">
-        <div className="w-full h-full bg-slate-100 rounded-lg flex items-center justify-center text-slate-950">
-         <Building2 className="w-10 h-10" />
-        </div>
-       </div>
-       <h3 className="text-xl font-bold text-slate-900 tracking-tight">{complex.nama}</h3>
-       <div className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-green-50 text-green-600 rounded-full text-xs font-bold ">
-        <CheckCircle2 className="w-3 h-3" /> {complex.status}
-       </div>
-      </div>
-     </Card>
-
-     <Card>
-      <div className="p-8 flex flex-col gap-6">
-       <div className="space-y-4">
-        <div className="flex flex-col gap-1">
-         <p className="text-xs font-bold text-slate-400 ">Komplek ID</p>
-         <p className="text-xs font-bold text-slate-900 break-all">{selectedPerumahanId}</p>
-        </div>
-        <div className="h-px bg-slate-50"></div>
-        <div className="flex flex-col gap-1">
-         <p className="text-xs font-bold text-slate-400 ">Tanggal Bergabung</p>
-         <p className="text-xs font-bold text-slate-900">01 Januari 2024</p>
-        </div>
-       </div>
-      </div>
-     </Card>
-    </div>
-
-    {/* Right Col: Edit Form */}
-    <div className="lg:col-span-8">
-     <Card hFull>
-      <CardHeader title="Pengaturan Identitas" subtitle="Informasi publik perumahan" />
-      <div className="p-8 space-y-8">
-       <div className="grid grid-cols-1 gap-8">
-        <Input 
-         label="Nama Perumahan"
-         value={complex.nama} 
-         onChange={(e) => setComplex({...complex, nama: e.target.value})}
-         placeholder="Nama Komplek..."
-         icon={Building2}
-        />
-
-        <div className="flex flex-col gap-2">
-         <label className="text-xs font-bold text-slate-400 ">Alamat Lengkap</label>
-         <div className="relative group">
-          <textarea
-           value={complex.alamat}
-           onChange={(e) => setComplex({...complex, alamat: e.target.value})}
-           className="w-full px-5 py-2.5 pl-14 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold text-slate-900 focus:outline-none focus:ring-4 focus:ring-slate-950/5 focus:border-slate-950 outline-none transition-all min-h-[150px] placeholder:text-slate-300 group-hover:border-slate-200"
-           placeholder="Alamat lengkap komplek..."
-          />
-          <MapPin className="w-5 h-5 text-slate-300 absolute left-5 top-5 group-hover:text-slate-400 transition-colors" />
-         </div>
-        </div>
-       </div>
-
-       <div className="pt-8 border-t border-slate-50">
-        <div className="bg-amber-50 p-6 rounded-xl border border-amber-100 flex gap-4">
-         <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)] shrink-0  shadow-amber-200/50">
-          <Info className="w-5 h-5 text-amber-600" />
-         </div>
-         <div className="space-y-1">
-          <h4 className="text-xs font-bold text-amber-700 ">Informasi Publik</h4>
-          <p className="text-xs text-amber-800 font-bold leading-relaxed">
-           Informasi ini akan ditampilkan pada halaman publik dan tagihan warga. Pastikan data yang dimasukkan sudah benar.
-          </p>
-         </div>
-        </div>
-       </div>
-      </div>
-     </Card>
-    </div>
-   </div>
-  </div>
- );
+  );
 }

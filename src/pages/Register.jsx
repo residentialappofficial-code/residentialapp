@@ -1,265 +1,267 @@
-import React, { useState } from 'react';
-import { PasswordInput } from "@/components/ui/PasswordInput";
-import { Button } from "@/components/ui/Button";
+import { useState } from "react";
+import { Button, Input, Textarea, PasswordInput } from "@/components/ui";
 import { useNavigate, Link } from "react-router-dom";
-import { Building2, UserPlus, ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { Building2, UserPlus, ArrowRight, ShieldCheck, CheckCircle2, Sparkles } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Register() {
- const [step, setStep] = useState(1);
- const [loading, setLoading] = useState(false);
- 
- // Admin Data
- const [email, setEmail] = useState("");
- const [password, setPassword] = useState("");
- const [nama, setNama] = useState("");
- const [passwordError, setPasswordError] = useState("");
- const [passwordStrength, setPasswordStrength] = useState(0);
- 
- // Complex Data
- const [namaPerumahan, setNamaPerumahan] = useState("");
- const [alamatPerumahan, setAlamatPerumahan] = useState("");
-
- const { signUp } = useAuth();
- const navigate = useNavigate();
-
- const validatePassword = (pass) => {
-  setPassword(pass);
-  let strength = 0;
-  if (pass.length >= 8) strength++;
-  if (/[A-Z]/.test(pass)) strength++;
-  if (/[0-9]/.test(pass)) strength++;
-  setPasswordStrength(strength);
-
-  if (pass.length < 8) {
-   setPasswordError("Password minimal 8 karakter");
-  } else if (!/[A-Z]/.test(pass)) {
-   setPasswordError("Harus mengandung minimal satu huruf besar");
-  } else if (!/[0-9]/.test(pass)) {
-   setPasswordError("Harus mengandung minimal satu angka");
-  } else {
-   setPasswordError("");
-  }
- };
-
- const handleRegister = async (e) => {
-  if (e) e.preventDefault();
-  setLoading(true);
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   
-  try {
-   const { data: perumahan, error: pError } = await supabase
-    .from('perumahan')
-    .insert({
-     nama: namaPerumahan,
-     alamat: alamatPerumahan,
-     status: 'active'
-    })
-    .select()
-    .single();
+  // Admin Data
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [nama, setNama] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordStrength, setPasswordStrength] = useState(0);
+  
+  // Complex Data
+  const [namaPerumahan, setNamaPerumahan] = useState("");
+  const [alamatPerumahan, setAlamatPerumahan] = useState("");
 
-   if (pError) throw pError;
+  const { signUp } = useAuth();
+  const navigate = useNavigate();
 
-   const { data: authData, error: authError } = await signUp(email, password, {
-    nama: nama,
-    role: 'admin',
-    perumahan_id: perumahan.id
-   });
+  const validatePassword = (pass) => {
+    setPassword(pass);
+    let strength = 0;
+    if (pass.length >= 8) strength++;
+    if (/[A-Z]/.test(pass)) strength++;
+    if (/[0-9]/.test(pass)) strength++;
+    setPasswordStrength(strength);
 
-   if (authError) throw authError;
+    if (pass.length < 8) {
+      setPasswordError("Password minimal 8 karakter");
+    } else if (!/[A-Z]/.test(pass)) {
+      setPasswordError("Harus mengandung minimal satu huruf besar");
+    } else if (!/[0-9]/.test(pass)) {
+      setPasswordError("Harus mengandung minimal satu angka");
+    } else {
+      setPasswordError("");
+    }
+  };
 
-   alert("Pendaftaran Berhasil! Komplek " + namaPerumahan + " telah dibuat. Silakan cek email untuk verifikasi.");
-   navigate("/login");
-  } catch (error) {
-   alert("Gagal mendaftar: " + error.message);
-  } finally {
-   setLoading(false);
-  }
- };
+  const handleRegister = async (e) => {
+    if (e) e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const { data: perumahan, error: pError } = await supabase
+        .from('perumahan')
+        .insert({
+          nama: namaPerumahan,
+          alamat: alamatPerumahan,
+          status: 'active'
+        })
+        .select()
+        .single();
 
- return (
-  <div className="flex min-h-screen w-full bg-white lg:bg-slate-50">
-   {/* Left Side: Branding */}
-   <div className="hidden lg:flex flex-1 bg-slate-950 text-white border border-slate-900 p-20 flex-col justify-between relative overflow-hidden">
-    <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-slate-900/50 rounded-full blur-[120px] -mr-96 -mt-96 animate-pulse"></div>
-    <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-slate-800/30 rounded-full blur-[100px] -ml-64 -mb-64"></div>
+      if (pError) throw pError;
 
-    <div className="relative z-10">
-     <div className="flex items-center gap-4 mb-24">
-      <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)]  shadow-none transition-transform hover:scale-105 duration-500">
-       <ShieldCheck className="w-5 h-5 text-black" />
-      </div>
-      <span className="text-xl font-bold tracking-tighter">SimPerumahan</span>
-     </div>
-     
-     <div className="max-w-lg space-y-10">
-      <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-white/60 text-xs font-bold ">
-       <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_12px_rgba(74,222,128,0.5)]"></span>
-       Modern Management Ecosystem
-      </div>
-      <h1 className="text-4xl font-bold leading-[0.95] tracking-tighter">
-       Build your <br />
-       <span className="text-slate-500">digital estate.</span>
-      </h1>
-      <p className="text-xl text-slate-400 font-medium leading-relaxed">
-       Join the network of property managers digitizing the future of residential living.
-      </p>
+      const { error: authError } = await signUp(email, password, {
+        nama: nama,
+        role: 'admin',
+        perumahan_id: perumahan.id
+      });
 
-      <div className="pt-10 grid grid-cols-2 gap-8">
-       {[
-        { label: "Total Assets", val: "Rp 12.4T+" },
-        { label: "Active Units", val: "850K+" }
-       ].map((stat, i) => (
-        <div key={i} className="space-y-1">
-         <p className="text-xl font-bold text-white">{stat.val}</p>
-         <p className="text-xs font-bold text-slate-500 ">{stat.label}</p>
+      if (authError) throw authError;
+
+      alert("Pendaftaran Berhasil! Komplek " + namaPerumahan + " telah dibuat. Silakan cek email untuk verifikasi.");
+      navigate("/login");
+    } catch (error) {
+      alert("Gagal mendaftar: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen w-full bg-slate-50 font-sans overflow-hidden">
+      {/* Left Side: Branding */}
+      <div className="hidden lg:flex flex-1 bg-slate-950 text-white p-24 flex-col justify-between relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[900px] h-[900px] bg-white/[0.04] rounded-full blur-[140px] -mr-96 -mt-96"></div>
+        <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-white/[0.02] rounded-full blur-[120px] -ml-64 -mb-64"></div>
+
+        <div className="relative z-10">
+          <div className="flex items-center gap-5 mb-40">
+            <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-2xl shadow-white/10">
+              <ShieldCheck className="w-9 h-9 text-black" />
+            </div>
+            <span className="text-3xl font-bold tracking-tighter">HABITIX</span>
+          </div>
+          
+          <div className="max-w-2xl space-y-12">
+            <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl text-white/80 text-[10px] font-bold uppercase tracking-widest">
+              <span className="w-2.5 h-2.5 rounded-full bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.6)] animate-pulse"></span>
+              Strategic Management Infrastructure
+            </div>
+            <h1 className="text-7xl font-bold leading-[0.9] tracking-tight">
+              Provision your <br />
+              <span className="text-slate-500 italic">digital estate.</span>
+            </h1>
+            <p className="text-2xl text-slate-400 font-bold leading-relaxed tracking-tight max-w-lg">
+              Join the elite network of property managers digitizing the future of residential living with HABITIX Platform.
+            </p>
+
+            <div className="pt-16 grid grid-cols-2 gap-12 border-t border-white/5">
+              {[
+                { label: "Asset Valuation", val: "Rp 14.8T+" },
+                { label: "Managed Units", val: "1.2M+" }
+              ].map((stat, i) => (
+                <div key={i} className="space-y-3">
+                  <p className="text-4xl font-bold text-white tracking-tighter">{stat.val}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-       ))}
-      </div>
-     </div>
-    </div>
 
-    <div className="relative z-10 flex justify-between text-xs font-bold text-slate-600 tracking-[0.3em]">
-     <span>© 2026 SimPerumahan.</span>
-     <div className="flex gap-6">
-      <span className="hover:text-white transition-colors cursor-pointer">Privacy</span>
-      <span className="hover:text-white transition-colors cursor-pointer">Terms</span>
-     </div>
-    </div>
-   </div>
-
-   {/* Right Side: Form */}
-   <div className="flex-1 flex items-center justify-center p-6 md:p-12">
-    <div className="w-full max-w-[540px]">
-     <div className="mb-12 text-center lg:text-left space-y-2">
-      <div className="lg:hidden flex items-center justify-center gap-3 mb-10">
-       <ShieldCheck className="w-10 h-10 text-slate-950" />
-       <span className="text-2xl font-bold tracking-tighter">SimPerumahan</span>
-      </div>
-      <h2 className="text-2xl font-bold text-slate-950 tracking-tight">Register Complex</h2>
-      <p className="text-slate-500 font-bold text-sm">Empower your community with premium digital tools.</p>
-     </div>
-
-     <div className="bg-white p-6 md:p-8 rounded-2xl border border-slate-100  shadow-none relative overflow-hidden group">
-      <div className="absolute top-0 right-0 w-40 h-40 bg-slate-50 rounded-full blur-3xl -mr-20 -mt-20 group-hover:bg-slate-100 transition-colors duration-700"></div>
-      
-      {/* Step Indicator */}
-      <div className="flex items-center gap-6 mb-12 p-1.5 bg-slate-50 rounded-xl border border-slate-100 relative z-10">
-       <button 
-        type="button"
-        onClick={() => setStep(1)}
-        className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-xl text-xs font-bold  transition-all ${step === 1 ? 'bg-white text-slate-950  shadow-none border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
-       >
-        <Building2 className={`w-4 h-4 ${step === 1 ? 'text-slate-950' : 'text-slate-300'}`} />
-        <span>1. Property</span>
-       </button>
-       <button 
-        type="button"
-        onClick={() => step === 2 || (namaPerumahan && alamatPerumahan ? setStep(2) : null)}
-        className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-xl text-xs font-bold  transition-all ${step === 2 ? 'bg-white text-slate-950  shadow-none border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
-       >
-        <UserPlus className={`w-4 h-4 ${step === 2 ? 'text-slate-950' : 'text-slate-300'}`} />
-        <span>2. Account</span>
-       </button>
-      </div>
-
-      <form onSubmit={handleRegister} className="flex flex-col gap-6 relative z-10">
-       {step === 1 ? (
-        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-         <div className="space-y-8">
-          <div className="flex flex-col gap-2">
-           <label className="text-xs font-bold text-slate-400  ml-1">Property Name</label>
-           <input
-            required
-            placeholder="e.g. Cendana Luxury Estate"
-            value={namaPerumahan}
-            onChange={(e) => setNamaPerumahan(e.target.value)}
-            className="w-full px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-950 focus:outline-none focus:ring-4 focus:ring-slate-950/5 focus:border-slate-950 transition-all placeholder:text-slate-300"
-           />
+        <div className="relative z-10 flex justify-between items-center text-[10px] font-bold text-slate-600 uppercase tracking-[0.4em]">
+          <span>© 2026 HABITIX Ecosystem</span>
+          <div className="flex gap-10">
+            <span className="hover:text-white transition-colors cursor-pointer">Security</span>
+            <span className="hover:text-white transition-colors cursor-pointer">Compliance</span>
           </div>
-          <div className="flex flex-col gap-2">
-           <label className="text-xs font-bold text-slate-400  ml-1">Complete Address</label>
-           <textarea
-            required
-            placeholder="Enter the complete address of the complex..."
-            value={alamatPerumahan}
-            onChange={(e) => setAlamatPerumahan(e.target.value)}
-            className="w-full px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-950 focus:outline-none focus:ring-4 focus:ring-slate-950/5 focus:border-slate-950 transition-all min-h-[140px] resize-none placeholder:text-slate-300"
-           />
-          </div>
-         </div>
-         <Button 
-          type="button" 
-          onClick={() => {
-           if (namaPerumahan && alamatPerumahan) setStep(2);
-           else alert("Please complete the property details!");
-          }}
-          variant="primary" 
-          size="lg"
-          className="w-full py-3 group rounded-xl  shadow-none"
-         >
-          Next to Account Setup
-          <ArrowRight className="w-5 h-5 ml-3 group-hover:translate-x-1 transition-transform" />
-         </Button>
         </div>
-       ) : (
-        <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-         <div className="space-y-8">
-          <div className="flex flex-col gap-2">
-           <label className="text-xs font-bold text-slate-400  ml-1">Administrator Name</label>
-           <input
-            required
-            placeholder="Your full legal name..."
-            value={nama}
-            onChange={(e) => setNama(e.target.value)}
-            className="w-full px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-950 focus:outline-none focus:ring-4 focus:ring-slate-950/5 focus:border-slate-950 transition-all placeholder:text-slate-300"
-           />
-          </div>
-          <div className="flex flex-col gap-2">
-           <label className="text-xs font-bold text-slate-400  ml-1">Business Email</label>
-           <input
-            type="email"
-            required
-            placeholder="admin@property.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-950 focus:outline-none focus:ring-4 focus:ring-slate-950/5 focus:border-slate-950 transition-all placeholder:text-slate-300"
-           />
-          </div>
-          <PasswordInput
-           label="Secure Password"
-           value={password}
-           onChange={(e) => validatePassword(e.target.value)}
-           error={passwordError}
-           strength={passwordStrength}
-           required
-           className="rounded-xl"
-          />
-         </div>
-         <div className="flex gap-4">
-          <Button type="button" onClick={() => setStep(1)} variant="ghost" className="flex-1 py-3 text-slate-400 font-bold  rounded-xl hover:bg-slate-50">Back</Button>
-          <Button 
-           type="submit" 
-           disabled={loading} 
-           variant="primary" 
-           size="lg"
-           className="flex-[2] py-3 rounded-xl  shadow-none"
-          >
-           {loading ? "Deploying..." : "Complete Setup"}
-          </Button>
-         </div>
-        </div>
-       )}
+      </div>
 
-       <div className="text-center pt-8 border-t border-slate-50">
-        <p className="text-xs font-bold text-slate-400">
-         Already managing? <Link to="/login" className="text-slate-950 font-bold hover:underline underline-offset-4 ml-1">Log in here</Link>
-        </p>
-       </div>
-      </form>
-     </div>
+      {/* Right Side: Form */}
+      <div className="flex-1 flex items-center justify-center p-6 relative">
+        <div className="w-full max-w-[560px] relative z-10">
+          <div className="mb-16 text-center lg:text-left space-y-4">
+            <div className="lg:hidden flex items-center justify-center gap-4 mb-12">
+              <ShieldCheck className="w-12 h-12 text-slate-950" />
+              <span className="text-3xl font-bold tracking-tighter">HABITIX</span>
+            </div>
+            <div className="flex items-center gap-3 justify-center lg:justify-start">
+              <div className="px-4 py-1.5 bg-slate-950 text-white rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                <Sparkles className="w-3 h-3" /> Onboarding Phase
+              </div>
+            </div>
+            <h2 className="text-4xl font-bold text-slate-950 tracking-tighter leading-none">Register Complex</h2>
+            <p className="text-slate-500 font-bold text-lg tracking-tight">Provision your community with premium enterprise tools.</p>
+          </div>
+
+          <div className="bg-white p-10 md:p-12 rounded-2xl border border-slate-100 shadow-2xl shadow-slate-950/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-56 h-56 bg-slate-50 rounded-full blur-[100px] -mr-28 -mt-28 group-hover:bg-slate-100 transition-all duration-1000"></div>
+            
+            {/* Step Indicator */}
+            <div className="flex items-center gap-6 mb-16 p-2 bg-slate-50/50 rounded-2xl border border-slate-100 relative z-10">
+              <button 
+                type="button"
+                onClick={() => setStep(1)}
+                className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${step === 1 ? 'bg-white text-slate-950 shadow-lg shadow-slate-900/5' : 'text-slate-300 hover:text-slate-400'}`}
+              >
+                <Building2 className={`w-4 h-4 ${step === 1 ? 'text-slate-950' : 'text-slate-300'}`} />
+                <span>1. Legal Property</span>
+              </button>
+              <button 
+                type="button"
+                onClick={() => step === 2 || (namaPerumahan && alamatPerumahan ? setStep(2) : null)}
+                className={`flex-1 flex items-center justify-center gap-3 py-5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${step === 2 ? 'bg-white text-slate-950 shadow-lg shadow-slate-900/5' : 'text-slate-300 hover:text-slate-400'}`}
+              >
+                <UserPlus className={`w-4 h-4 ${step === 2 ? 'text-slate-950' : 'text-slate-300'}`} />
+                <span>2. Master Identity</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleRegister} className="flex flex-col gap-10 relative z-10">
+              {step === 1 ? (
+                <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-700">
+                  <div className="space-y-10">
+                    <Input
+                      label="Property Designation Name"
+                      required
+                      placeholder="e.g. Cendana Luxury Estate"
+                      value={namaPerumahan}
+                      onChange={(e) => setNamaPerumahan(e.target.value)}
+                      icon={Building2}
+                      className="bg-slate-50/30"
+                    />
+                    <Textarea
+                      label="Complete Geographical Address"
+                      required
+                      placeholder="Enter the complete address of the complex..."
+                      value={alamatPerumahan}
+                      onChange={(e) => setAlamatPerumahan(e.target.value)}
+                      className="min-h-[160px] bg-slate-50/30"
+                    />
+                  </div>
+                  <Button 
+                    type="button" 
+                    onClick={() => {
+                      if (namaPerumahan && alamatPerumahan) setStep(2);
+                      else alert("Please complete the property details!");
+                    }}
+                    variant="primary" 
+                    size="lg"
+                    className="w-full py-6 group rounded-full uppercase tracking-widest font-bold text-[10px] shadow-xl shadow-slate-950/10"
+                  >
+                    Proceed to Identity Setup
+                    <ArrowRight className="w-5 h-5 ml-4 group-hover:translate-x-1.5 transition-transform" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-10 animate-in fade-in slide-in-from-right-8 duration-700">
+                  <div className="space-y-10">
+                    <Input
+                      label="Master Administrator Name"
+                      required
+                      placeholder="Your full legal name..."
+                      value={nama}
+                      onChange={(e) => setNama(e.target.value)}
+                      icon={CheckCircle2}
+                      className="bg-slate-50/30"
+                    />
+                    <Input
+                      label="Designated Business Email"
+                      type="email"
+                      required
+                      placeholder="admin@property.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      icon={ShieldCheck}
+                      className="bg-slate-50/30"
+                    />
+                    <PasswordInput
+                      label="Secure Access Credential"
+                      value={password}
+                      onChange={(e) => validatePassword(e.target.value)}
+                      error={passwordError}
+                      strength={passwordStrength}
+                      required
+                      className="bg-slate-50/30"
+                    />
+                  </div>
+                  <div className="flex gap-6">
+                    <Button type="button" onClick={() => setStep(1)} variant="ghost" className="flex-1 py-5 text-slate-300 font-bold uppercase tracking-widest text-[10px] hover:text-slate-950 hover:bg-slate-50">Back</Button>
+                    <Button 
+                      type="submit" 
+                      disabled={loading} 
+                      variant="primary" 
+                      size="lg"
+                      className="flex-[2] py-5 rounded-full uppercase tracking-widest font-bold text-[10px] shadow-xl shadow-slate-950/10"
+                    >
+                      {loading ? "Provisioning..." : "Finalize Deployment"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-center pt-10 border-t border-slate-50">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  Already managing a complex? <Link to="/login" className="text-slate-950 font-bold hover:underline underline-offset-8 ml-2">Secure Login</Link>
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+        
+        {/* Background accents for mobile/tablet */}
+        <div className="absolute -bottom-60 -left-60 w-96 h-96 bg-slate-200/50 blur-[140px] rounded-full lg:hidden"></div>
+      </div>
     </div>
-   </div>
-  </div>
- );
+  );
 }

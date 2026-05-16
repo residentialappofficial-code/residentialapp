@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     nama TEXT,
-    role TEXT DEFAULT 'admin' CHECK (role IN ('super_admin', 'admin', 'resident')),
+    role TEXT DEFAULT 'admin' CHECK (role IN ('super_admin', 'admin', 'warga')),
     perumahan_id UUID REFERENCES public.perumahan(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS public.iuran_config (
     rekening_bank TEXT,
     rekening_nama TEXT,
     qris_url TEXT,
+    use_unique_code BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -187,7 +188,7 @@ BEGIN
       new.id,
       new.email,
       new.raw_user_meta_data->>'nama',
-      COALESCE(new.raw_user_meta_data->>'role', 'resident'),
+      COALESCE(new.raw_user_meta_data->>'role', 'warga'),
       (NULLIF(new.raw_user_meta_data->>'perumahan_id', ''))::uuid
     )
     ON CONFLICT (id) DO NOTHING;

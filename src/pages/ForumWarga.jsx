@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button, Card, Badge, Modal, Input } from "@/components/ui";
+import { Button, Card, Badge, Modal, Input, Select, Textarea } from "@/components/ui";
 import { SelectionRequired } from "@/components/ui/SelectionRequired";
 
 export default function ForumWarga() {
@@ -48,7 +48,7 @@ export default function ForumWarga() {
         .from('forum_posts')
         .select(`
           *,
-          author:profiles(id, nama, role),
+          profiles!author_id(id, nama, role),
           likes:forum_likes(user_id),
           bookmarks:forum_bookmarks(user_id),
           comment_count:forum_comments(count)
@@ -57,7 +57,11 @@ export default function ForumWarga() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setPosts(data || []);
+      const mappedData = data?.map(post => ({
+        ...post,
+        author: post.profiles
+      }));
+      setPosts(mappedData || []);
     } catch (err) {
       console.error("Gagal memuat kiriman:", err.message);
     } finally {
@@ -150,10 +154,14 @@ export default function ForumWarga() {
   const fetchComments = async (postId) => {
     const { data } = await supabase
       .from('forum_comments')
-      .select('*, author:profiles(nama, role)')
+      .select('*, profiles!author_id(nama, role)')
       .eq('post_id', postId)
       .order('created_at', { ascending: true });
-    setComments(data || []);
+    const mappedComments = data?.map(comment => ({
+      ...comment,
+      author: comment.profiles
+    }));
+    setComments(mappedComments || []);
   };
 
   const handleComment = async () => {
@@ -175,13 +183,19 @@ export default function ForumWarga() {
       setCommenting(false);
     }
   };
-
-  const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.content.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         post.author?.nama?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredPosts = posts.filter((post) => {
+    const content = post.content || "";
+    const authorName = post.author?.nama || "";
+    const search = searchTerm.toLowerCase();
+    
+    const matchesSearch = content.toLowerCase().includes(search) || 
+                         authorName.toLowerCase().includes(search);
     const matchesCategory = filterCategory === "All" || post.kategori === filterCategory;
+
     return matchesSearch && matchesCategory;
   });
+
+  const isModerator = profile?.role === 'admin' || profile?.role === 'super_admin' || !!profile?.pengurus;
 
   if (profile?.role === 'super_admin' && !selectedPerumahanId) {
     return <SelectionRequired />;
@@ -190,10 +204,10 @@ export default function ForumWarga() {
   return (
     <div className="max-w-full mx-auto flex flex-col gap-8">
       {/* Header & Search */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Forum Warga</h1>
-          <p className="text-slate-500 text-sm font-medium">Ruang diskusi dan berbagi informasi antar tetangga.</p>
+          <p className="text-slate-500 text-sm mt-1">Ruang diskusi dan berbagi informasi antar tetangga.</p>
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <Input 
@@ -201,16 +215,16 @@ export default function ForumWarga() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             icon={Search}
-            className="md:w-80"
+            className="md:w-96"
           />
           <div className="relative group">
-            <Button variant="outline" icon={Filter} className="font-bold">
+            <Button variant="outline" icon={Filter} size="md" className="font-semibold">
               {filterCategory === "All" ? "Kategori" : filterCategory}
             </Button>
-            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2">
-              <button onClick={() => setFilterCategory("All")} className="w-full text-left px-4 py-2 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600">Semua</button>
+            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 p-2">
+              <button onClick={() => setFilterCategory("All")} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-semibold text-slate-500 transition-colors">Semua Kategori</button>
               {categories.map(cat => (
-                <button key={cat} onClick={() => setFilterCategory(cat)} className="w-full text-left px-4 py-2 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600">{cat}</button>
+                <button key={cat} onClick={() => setFilterCategory(cat)} className="w-full text-left px-4 py-2.5 hover:bg-slate-50 rounded-lg text-xs font-semibold text-slate-500 transition-colors">{cat}</button>
               ))}
             </div>
           </div>
@@ -218,30 +232,30 @@ export default function ForumWarga() {
       </div>
 
       {/* Create Post */}
-      <Card noPadding className="overflow-hidden border-2 border-slate-950/5">
-        <div className="p-8 space-y-6">
-          <div className="flex gap-6">
-            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-bold shrink-0">
+      <Card noPadding>
+        <div className="p-6 space-y-6">
+          <div className="flex gap-4">
+            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-sm shadow-indigo-100">
               {profile?.nama?.charAt(0)}
             </div>
-            <textarea 
+            <Textarea 
               placeholder="Apa yang ingin Anda bagikan hari ini?" 
-              className="flex-1 text-lg font-bold text-slate-900 focus:outline-none resize-none py-2 placeholder:text-slate-300 bg-transparent min-h-[100px]"
+              className="flex-1 !bg-transparent !border-none !ring-0 !px-0 !py-2 text-base font-medium text-slate-900 placeholder:text-slate-300 min-h-[80px]"
               value={newPost}
               onChange={(e) => setNewPost(e.target.value)}
             />
           </div>
           
           <div className="flex flex-wrap justify-between items-center gap-4 pt-6 border-t border-slate-50">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {categories.map(cat => (
                 <button 
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
                     selectedCategory === cat 
-                      ? 'bg-slate-900 border-slate-900 text-white' 
-                      : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                      ? 'bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-100' 
+                      : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                   }`}
                 >
                   {cat}
@@ -252,8 +266,7 @@ export default function ForumWarga() {
               onClick={handlePost}
               disabled={!newPost.trim()}
               variant="primary"
-              size="lg"
-              className="px-10 font-bold"
+              size="md"
               icon={Send}
             >
               Kirim Postingan
@@ -266,71 +279,80 @@ export default function ForumWarga() {
       <div className="flex flex-col gap-6">
         {loading ? (
           Array(3).fill(0).map((_, i) => (
-            <div key={i} className="bg-white h-64 rounded-2xl border border-slate-100 animate-pulse" />
+            <div key={i} className="bg-white h-60 rounded-xl border border-slate-50 animate-pulse" />
           ))
         ) : filteredPosts.length === 0 ? (
-          <Card className="py-24 text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
-              <MessageSquare className="w-10 h-10" />
+          <Card className="py-24 text-center flex flex-col items-center gap-6">
+            <div className="w-16 h-16 bg-slate-50 rounded-xl flex items-center justify-center text-slate-100">
+              <MessageSquare className="w-8 h-8" />
             </div>
-            <p className="text-slate-400 font-bold tracking-widest text-xs uppercase">Belum ada diskusi yang ditemukan</p>
+            <p className="text-slate-400 font-semibold text-xs tracking-wider">Belum ada diskusi yang ditemukan</p>
           </Card>
         ) : filteredPosts.map((post) => {
           const isLiked = post.likes?.some(l => l.user_id === profile.id);
           const isBookmarked = post.bookmarks?.some(b => b.user_id === profile.id);
           const isAuthor = post.author_id === profile.id;
+          const canManage = isAuthor || isModerator;
 
           return (
-            <Card key={post.id} className="group hover:border-slate-300 transition-all">
+            <Card key={post.id} className="group transition-all">
               <div className="flex flex-col gap-6">
                 <div className="flex justify-between items-start">
                   <div className="flex gap-4 items-center">
-                    <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                    <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center text-slate-900 font-bold text-xs border border-slate-100 shadow-sm">
                       {post.author?.nama?.charAt(0)}
                     </div>
                     <div>
                       <div className="flex items-center gap-2 mb-0.5">
-                        <p className="text-sm font-bold text-slate-900">{post.author?.nama}</p>
-                        <Badge variant="slate" className="text-[8px] px-1.5 py-0">{post.author?.role}</Badge>
+                        <p className="text-sm font-bold text-slate-900 tracking-tight leading-none">{post.author?.nama}</p>
+                        <Badge variant="indigo" className="text-[10px] px-2 py-0.5 font-bold rounded-md bg-slate-900 text-white border-none">
+                          {post.author?.role}
+                        </Badge>
                       </div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                        {new Date(post.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} • {post.kategori}
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {new Date(post.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} • {post.kategori}
                       </p>
                     </div>
                   </div>
                   
-                  {isAuthor && (
-                    <div className="flex gap-2">
-                      <button onClick={() => openEditModal(post)} className="p-2 text-slate-300 hover:text-slate-900 transition-colors"><Edit className="w-4 h-4" /></button>
-                      <button onClick={() => handleDeletePost(post.id)} className="p-2 text-slate-300 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  {canManage && (
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      {isAuthor && (
+                        <button onClick={() => openEditModal(post)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all">
+                          <Edit size={14} />
+                        </button>
+                      )}
+                      <button onClick={() => handleDeletePost(post.id)} className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   )}
                 </div>
                 
-                <p className="text-slate-800 text-lg font-bold leading-relaxed tracking-tight">
+                <p className="text-slate-700 text-base font-medium leading-relaxed">
                   {post.content}
                 </p>
 
                 <div className="flex items-center gap-6 pt-4 border-t border-slate-50">
                   <button 
                     onClick={() => handleLike(post.id, isLiked)}
-                    className={`flex items-center gap-2 text-xs font-bold transition-all ${isLiked ? 'text-red-500' : 'text-slate-400 hover:text-red-500'}`}
+                    className={`flex items-center gap-2 text-xs font-semibold transition-all ${isLiked ? 'text-rose-500' : 'text-slate-400 hover:text-rose-500'}`}
                   >
                     <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-                    {post.likes?.length || 0} Suka
+                    {post.likes?.length || 0}
                   </button>
                   <button 
                     onClick={() => openComments(post)}
-                    className="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-900 transition-all"
+                    className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-indigo-600 transition-all"
                   >
                     <MessageCircle className="w-4 h-4" />
                     {post.comment_count?.[0]?.count || 0} Diskusi
                   </button>
                   <button 
                     onClick={() => handleBookmark(post.id, isBookmarked)}
-                    className={`ml-auto flex items-center gap-2 text-xs font-bold transition-all ${isBookmarked ? 'text-blue-600' : 'text-slate-400 hover:text-blue-600'}`}
+                    className={`ml-auto text-slate-400 hover:text-indigo-600 transition-all ${isBookmarked ? 'text-indigo-600' : ''}`}
                   >
-                    {isBookmarked ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+                    <Bookmark size={18} className={isBookmarked ? 'fill-current' : ''} />
                   </button>
                 </div>
               </div>
@@ -345,9 +367,9 @@ export default function ForumWarga() {
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Postingan"
       >
-        <div className="space-y-6">
-          <textarea 
-            className="w-full text-lg font-bold text-slate-900 focus:outline-none resize-none bg-slate-50 p-4 rounded-2xl min-h-[150px]"
+        <div className="space-y-8 p-2">
+          <Textarea 
+            className="w-full text-lg min-h-[150px]"
             value={editingPost?.content}
             onChange={(e) => setEditingPost({...editingPost, content: e.target.value})}
           />
@@ -356,19 +378,19 @@ export default function ForumWarga() {
               <button 
                 key={cat}
                 onClick={() => setEditingPost({...editingPost, kategori: cat})}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border ${
+                className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all border ${
                   editingPost?.kategori === cat 
-                    ? 'bg-slate-900 border-slate-900 text-white' 
-                    : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                    ? 'bg-slate-900 border-slate-900 text-white shadow-sm' 
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                 }`}
               >
                 {cat}
               </button>
             ))}
           </div>
-          <div className="flex gap-3 pt-4">
-            <Button variant="ghost" className="flex-1" onClick={() => setIsEditModalOpen(false)}>Batal</Button>
-            <Button variant="primary" className="flex-1" onClick={handleUpdatePost}>Simpan Perubahan</Button>
+          <div className="flex gap-4 pt-6">
+            <Button variant="ghost" className="flex-1 py-2.5 font-semibold" onClick={() => setIsEditModalOpen(false)}>Batal</Button>
+            <Button variant="primary" className="flex-1 py-2.5 font-semibold" onClick={handleUpdatePost}>Simpan Perubahan</Button>
           </div>
         </div>
       </Modal>
@@ -377,46 +399,49 @@ export default function ForumWarga() {
       <Modal
         isOpen={isCommentModalOpen}
         onClose={() => setIsCommentModalOpen(false)}
-        title="Diskusi"
+        title="Diskusi Warga"
       >
-        <div className="space-y-8">
+        <div className="space-y-8 p-2">
           {selectedPost && (
-            <div className="pb-6 border-b border-slate-100">
+            <div className="pb-8 border-b border-slate-50">
               <div className="flex gap-3 items-center mb-4">
-                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 font-bold text-xs">
+                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 font-bold text-[10px]">
                   {selectedPost.author?.nama?.charAt(0)}
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-900">{selectedPost.author?.nama}</p>
-                  <p className="text-[10px] text-slate-400 font-bold">{selectedPost.kategori}</p>
+                  <p className="text-xs font-bold text-slate-950 tracking-tight leading-none">{selectedPost.author?.nama}</p>
+                  <p className="text-[9px] text-slate-400 font-semibold tracking-wider mt-0.5">{selectedPost.kategori}</p>
                 </div>
               </div>
-              <p className="text-sm font-bold text-slate-700 leading-relaxed">{selectedPost.content}</p>
+              <p className="text-base font-semibold text-slate-800 leading-relaxed tracking-tight">{selectedPost.content}</p>
             </div>
           )}
 
-          <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-2">
+          <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-2 scrollbar-hide">
             {comments.length === 0 ? (
-              <p className="text-center py-8 text-xs font-bold text-slate-300 uppercase tracking-widest">Belum ada komentar</p>
+              <div className="text-center py-12 flex flex-col items-center gap-3 opacity-30">
+                <MessageCircle className="w-8 h-8" />
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jadilah yang pertama berkomentar</p>
+              </div>
             ) : comments.map(comment => (
-              <div key={comment.id} className="flex gap-4">
-                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 font-bold text-xs shrink-0">
+              <div key={comment.id} className="flex gap-4 group">
+                <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300 font-bold text-[10px] shrink-0 transition-colors group-hover:bg-slate-100">
                   {comment.author?.nama?.charAt(0)}
                 </div>
-                <div className="bg-slate-50 p-4 rounded-2xl flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <p className="text-xs font-bold text-slate-900">{comment.author?.nama}</p>
-                    <p className="text-[9px] text-slate-400 font-bold">{new Date(comment.created_at).toLocaleDateString()}</p>
+                <div className="bg-slate-50/50 p-4 rounded-xl flex-1 border border-transparent transition-all group-hover:border-slate-100 group-hover:bg-white">
+                  <div className="flex justify-between items-center mb-1.5">
+                    <p className="text-xs font-bold text-slate-950 tracking-tight leading-none">{comment.author?.nama}</p>
+                    <p className="text-[9px] text-slate-400 font-semibold tracking-wide">{new Date(comment.created_at).toLocaleDateString()}</p>
                   </div>
-                  <p className="text-xs font-bold text-slate-600 leading-relaxed">{comment.content}</p>
+                  <p className="text-xs font-medium text-slate-600 leading-relaxed tracking-tight">{comment.content}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="pt-6 border-t border-slate-100 flex gap-3">
+          <div className="pt-6 border-t border-slate-50 flex gap-3">
             <Input 
-              placeholder="Tulis komentar..." 
+              placeholder="Tulis tanggapan Anda..." 
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               className="flex-1"
@@ -426,6 +451,7 @@ export default function ForumWarga() {
               onClick={handleComment} 
               isLoading={commenting}
               disabled={!newComment.trim()}
+              size="md"
             >
               Kirim
             </Button>
