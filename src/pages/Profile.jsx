@@ -152,9 +152,9 @@ export default function Profile() {
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Profil Saya</h1>
           <p className="text-slate-500 text-sm mt-1">Kelola identitas personal dan keamanan akun HABITIX Anda.</p>
         </div>
-        <div className="flex gap-4">
-          <Button variant="ghost" icon={LogOut} size="lg" className="text-red-500 font-bold hover:bg-red-50 rounded-2xl" onClick={signOut}>Keluar</Button>
-          <Button variant="primary" size="lg" icon={Key} className="font-bold rounded-2xl px-8 shadow-indigo-200 shadow-lg" onClick={() => setIsModalOpen(true)}>Ubah Password</Button>
+        <div className="flex gap-3 w-full md:w-auto">
+          <Button variant="ghost" icon={LogOut} size="lg" className="flex-1 md:flex-none text-red-500 font-bold hover:bg-red-50 rounded-2xl" onClick={signOut}>Keluar</Button>
+          <Button variant="primary" size="lg" icon={Key} className="flex-1 md:flex-none font-bold rounded-2xl px-4 md:px-8 shadow-indigo-200 shadow-lg text-xs md:text-sm" onClick={() => setIsModalOpen(true)}>Ubah Password</Button>
         </div>
       </div>
 
@@ -259,9 +259,9 @@ export default function Profile() {
             <CardHeader 
               title="Informasi Administratif" 
               subtitle="Data identitas utama yang digunakan dalam ekosistem perumahan" 
-              action={<Button variant="primary" size="lg" className="px-10 font-bold rounded-2xl shadow-indigo-200 shadow-lg" onClick={handleUpdate} isLoading={loading}>Simpan Perubahan</Button>}
+              action={<Button variant="primary" size="lg" className="hidden sm:flex px-10 font-bold rounded-2xl shadow-indigo-200 shadow-lg" onClick={handleUpdate} isLoading={loading}>Simpan Perubahan</Button>}
             />
-            <div className="p-8 md:p-10 space-y-10">
+            <div className="p-6 md:p-10 space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Input
                   label="Nama Lengkap Sesuai KTP"
@@ -291,6 +291,10 @@ export default function Profile() {
                   placeholder="Masukkan alamat lengkap..."
                   className="min-h-[120px]"
                 />
+              </div>
+
+              <div className="flex sm:hidden">
+                <Button variant="primary" size="lg" className="w-full font-bold rounded-2xl shadow-indigo-200 shadow-lg" onClick={handleUpdate} isLoading={loading}>Simpan Perubahan</Button>
               </div>
 
               {(role === 'admin' || role === 'super_admin') && (

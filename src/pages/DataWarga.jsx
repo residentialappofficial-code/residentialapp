@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, Edit, Trash2, Download, UserPlus, X, UserMinus, Users, Home, Map, Database, ArrowRight, ShieldCheck, UserCircle, Building2, Mail, Phone, KeyRound, Eye, ArrowUpDown, Calendar } from "lucide-react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabase";
 import { createClient } from '@supabase/supabase-js';
@@ -82,6 +82,23 @@ export default function DataWarga() {
   });
 
   const [sortConfig, setSortConfig] = useState({ key: 'nama', direction: 'asc' });
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
+      if (sortConfig.key === 'nama') {
+        return sortConfig.direction === 'asc' 
+          ? a.nama.localeCompare(b.nama) 
+          : b.nama.localeCompare(a.nama);
+      }
+      if (sortConfig.key === 'blok_no') {
+        const valA = a.blok?.blok_no || "";
+        const valB = b.blok?.blok_no || "";
+        return sortConfig.direction === 'asc' 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      }
+      return 0;
+    });
+  }, [data, sortConfig]);
   const [blocks, setBlocks] = useState([]);
 
   const fetchBlocks = useCallback(async () => {
@@ -536,6 +553,7 @@ export default function DataWarga() {
           }
         />
 
+        <div className="hidden md:block">
         <Table>
           <THead>
             <TR isHeader>
@@ -570,21 +588,7 @@ export default function DataWarga() {
               ))
             ) : filteredData.length === 0 ? (
               <TR><TD colSpan={7} textAlign="center" className="py-24 text-[10px] font-bold tracking-[0.3em] text-slate-400 uppercase">Tidak ada data ditemukan untuk filter ini.</TD></TR>
-            ) : [...data].sort((a, b) => {
-                if (sortConfig.key === 'nama') {
-                  return sortConfig.direction === 'asc' 
-                    ? a.nama.localeCompare(b.nama) 
-                    : b.nama.localeCompare(a.nama);
-                }
-                if (sortConfig.key === 'blok_no') {
-                  const valA = a.blok?.blok_no || "";
-                  const valB = b.blok?.blok_no || "";
-                  return sortConfig.direction === 'asc' 
-                    ? valA.localeCompare(valB) 
-                    : valB.localeCompare(valA);
-                }
-                return 0;
-              }).map((item) => (
+            ) : sortedData.map((item) => (
               <TR key={item.id} className="group">
                 <TD>
                   <div className="flex items-center gap-4">
@@ -657,6 +661,70 @@ export default function DataWarga() {
             ))}
           </TBody>
         </Table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block md:hidden space-y-4 px-4 py-2">
+          {sortedData.length === 0 ? (
+            <div className="text-center py-20 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
+              Data warga tidak ditemukan
+            </div>
+          ) : (
+            sortedData.map((item) => (
+              <Card key={item.id} className="p-4 flex flex-col gap-4 border border-slate-100 shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-900 tracking-tight">{item.nama}</span>
+                    <span className="text-xs font-semibold text-indigo-600 mt-0.5">Blok {item.blok}</span>
+                  </div>
+                  <Badge variant={item.status === 'aktif' ? 'green' : 'amber'}>
+                    {item.status || 'aktif'}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-1.5 text-xs text-slate-500 font-medium py-2 border-y border-slate-50">
+                  <p className="flex justify-between"><span>Email:</span> <span className="text-slate-900">{item.email || "-"}</span></p>
+                  <p className="flex justify-between"><span>Telepon:</span> <span className="text-slate-900">{item.phone || "-"}</span></p>
+                  <p className="flex justify-between"><span>Anggota Keluarga:</span> <span className="text-slate-900">{item.family_members || 0} orang</span></p>
+                  <p className="flex justify-between"><span>Tgl Serah Terima:</span> <span className="text-slate-900">{item.tgl_serah_terima ? new Date(item.tgl_serah_terima).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : "-"}</span></p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <PermissionGuard module="warga" action="edit">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 text-slate-700" 
+                      onClick={() => handleEdit(item)}
+                    >
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="px-3 text-slate-500" 
+                      onClick={() => handleResetPassword(item)}
+                      title="Reset Password"
+                    >
+                      <UserCircle className="w-4.5 h-4.5" />
+                    </Button>
+                  </PermissionGuard>
+                  
+                  <PermissionGuard module="warga" action="delete">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1 text-red-600 hover:bg-red-50 border-red-200" 
+                      onClick={() => handleDeleteWarga(item.id)}
+                    >
+                      Hapus
+                    </Button>
+                  </PermissionGuard>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
 
         {/* Pagination Footer */}
         <div className="px-10 py-6 bg-slate-50/30 flex justify-between items-center border-t border-slate-50">

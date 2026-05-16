@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Header } from '@/components/layout/Header';
@@ -83,12 +83,13 @@ function PublicRoute({ children }) {
 }
 
 function AppLayout({ children }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50">
-      <AppSidebar />
-      <div className="flex flex-col flex-1 min-w-0 h-screen overflow-hidden ml-64">
-        <Header />
-        <main className="flex-1 overflow-y-auto pt-20 md:pt-24 p-6">
+    <div className="flex h-screen w-full overflow-hidden bg-slate-50 relative">
+      <AppSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <div className="flex flex-col flex-1 min-w-0 h-screen overflow-hidden lg:ml-64 ml-0">
+        <Header onMenuClick={() => setIsSidebarOpen(true)} />
+        <main className="flex-1 overflow-y-auto pt-20 md:pt-24 p-4 md:p-6">
           <div className="w-full max-w-full mx-auto">
             {children}
           </div>

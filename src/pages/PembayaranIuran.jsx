@@ -108,7 +108,7 @@ export default function PembayaranIuran() {
           }
         />
 
-        <div className="overflow-x-auto scrollbar-hide">
+        <div className="overflow-x-auto scrollbar-hide hidden lg:block">
           <Table>
             <THead>
               <TR isHeader>
@@ -161,6 +161,57 @@ export default function PembayaranIuran() {
               ))}
             </TBody>
           </Table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block lg:hidden space-y-4 mt-4">
+          {loading ? (
+            Array(3).fill(0).map((_, i) => (
+              <div key={i} className="h-32 bg-slate-50 rounded-2xl animate-pulse"></div>
+            ))
+          ) : filteredWarga.length === 0 ? (
+            <div className="text-center py-20 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
+              Data warga tidak ditemukan
+            </div>
+          ) : (
+            filteredWarga.map((w) => (
+              <Card key={w.id} className="p-4 flex flex-col gap-4 border border-slate-100 shadow-sm">
+                <div className="flex flex-col">
+                  <span className="text-sm font-bold text-slate-900 tracking-tight">{w.nama}</span>
+                  <span className="text-xs font-semibold text-indigo-600 mt-0.5">Blok {w.blok}</span>
+                </div>
+                
+                <div className="space-y-2 border-t border-slate-50 pt-3">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status Pembayaran Bulanan</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {months.map((m, idx) => {
+                      const monthNum = idx + 1;
+                      const status = getStatus(w.id, monthNum);
+                      
+                      return (
+                        <div 
+                          key={m}
+                          className={`
+                            px-1.5 py-2 text-[10px] font-bold rounded-xl uppercase tracking-wider text-center border
+                            ${status === 'Paid' 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                              : status === 'Pending'
+                                ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse'
+                                : status === 'Unpaid'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                  : 'bg-slate-50 text-slate-400 border-slate-100'}
+                          `}
+                        >
+                          <span className="block text-[9px] opacity-60 font-semibold">{m.substring(0, 3)}</span>
+                          <span className="block mt-0.5">{status === 'Paid' ? 'LUNAS' : status === 'Pending' ? 'TUNDA' : status === 'Unpaid' ? 'BELUM' : '-'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
         </div>
       </Card>
     </div>

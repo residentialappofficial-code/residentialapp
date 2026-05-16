@@ -178,7 +178,7 @@ export default function ManageRoles() {
                     {role.is_system && <Badge variant="blue" className="mt-1">Sistem</Badge>}
                   </div>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="sm" icon={Edit} onClick={() => handleEdit(role)} />
                   {!role.is_system && (
                     <Button variant="ghost" size="sm" icon={Trash2} className="text-red-500" onClick={() => handleDelete(role.id, role.is_system)} />
@@ -229,7 +229,7 @@ export default function ManageRoles() {
           <div className="space-y-4">
             <div className="flex items-center justify-between px-2">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Matriks Izin Akses</p>
-              <div className="flex gap-4">
+              <div className="hidden sm:flex gap-4">
                 {ACTIONS.map(action => (
                   <span key={action.id} className="text-[10px] font-bold text-slate-400 uppercase w-12 text-center">{action.label}</span>
                 ))}
@@ -238,16 +238,16 @@ export default function ManageRoles() {
 
             <div className="space-y-2">
               {MODULES.map(module => (
-                <div key={module.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:bg-white hover:border-indigo-200 transition-all">
+                <div key={module.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 group hover:bg-white hover:border-indigo-200 transition-all gap-4">
                   <span className="text-sm font-semibold text-slate-700">{module.label}</span>
-                  <div className="flex gap-4">
+                  <div className="flex justify-between sm:justify-start gap-4">
                     {ACTIONS.map(action => {
                       const isChecked = (formData.permissions[module.id] || []).includes(action.id);
                       return (
                         <div 
                           key={action.id}
                           onClick={() => togglePermission(module.id, action.id)}
-                          className={`w-12 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all ${isChecked ? 'bg-slate-900 text-white shadow-md shadow-slate-100' : 'bg-white text-slate-300 border border-slate-200 hover:border-slate-900/20'}`}
+                          className={`flex-1 sm:flex-none w-12 h-8 rounded-lg flex items-center justify-center cursor-pointer transition-all ${isChecked ? 'bg-slate-900 text-white shadow-md shadow-slate-100' : 'bg-white text-slate-300 border border-slate-200 hover:border-slate-900/20'}`}
                         >
                           {isChecked ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
                         </div>

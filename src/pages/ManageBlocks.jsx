@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Search, Edit, Trash2, Plus, X, Building2, Map, ShieldCheck, UserCircle, Phone, Calendar, ArrowUpDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,6 +48,28 @@ export default function ManageBlocks() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'blok_no', direction: 'asc' });
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
+      if (sortConfig.key === 'blok_no') {
+        return sortConfig.direction === 'asc' 
+          ? a.blok_no.localeCompare(b.blok_no) 
+          : b.blok_no.localeCompare(a.blok_no);
+      }
+      if (sortConfig.key === 'luas_tanah') {
+        return sortConfig.direction === 'asc' 
+          ? (a.luas_tanah || 0) - (b.luas_tanah || 0)
+          : (b.luas_tanah || 0) - (a.luas_tanah || 0);
+      }
+      if (sortConfig.key === 'tgl_serah_terima') {
+        const dateA = a.tgl_serah_terima || "0000-00-00";
+        const dateB = b.tgl_serah_terima || "0000-00-00";
+        return sortConfig.direction === 'asc' 
+          ? dateA.localeCompare(dateB) 
+          : dateB.localeCompare(dateA);
+      }
+      return 0;
+    });
+  }, [data, sortConfig]);
   const [editingId, setEditingId] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -190,6 +212,7 @@ export default function ManageBlocks() {
           }
         />
 
+        <div className="hidden md:block">
         <Table>
           <THead>
             <TR isHeader>
@@ -232,26 +255,7 @@ export default function ManageBlocks() {
               ))
             ) : data.length === 0 ? (
               <TR><TD colSpan={6} textAlign="center" className="py-20 text-slate-400 font-bold uppercase tracking-widest text-[10px]">Data blok tidak ditemukan</TD></TR>
-            ) : [...data].sort((a, b) => {
-                if (sortConfig.key === 'blok_no') {
-                  return sortConfig.direction === 'asc' 
-                    ? a.blok_no.localeCompare(b.blok_no) 
-                    : b.blok_no.localeCompare(a.blok_no);
-                }
-                if (sortConfig.key === 'luas_tanah') {
-                  return sortConfig.direction === 'asc' 
-                    ? (a.luas_tanah || 0) - (b.luas_tanah || 0)
-                    : (b.luas_tanah || 0) - (a.luas_tanah || 0);
-                }
-                if (sortConfig.key === 'tgl_serah_terima') {
-                  const dateA = a.tgl_serah_terima || "0000-00-00";
-                  const dateB = b.tgl_serah_terima || "0000-00-00";
-                  return sortConfig.direction === 'asc' 
-                    ? dateA.localeCompare(dateB) 
-                    : dateB.localeCompare(dateA);
-                }
-                return 0;
-              }).map((item) => (
+            ) : sortedData.map((item) => (
               <TR key={item.id} className="group hover:bg-slate-50/50 transition-colors">
                 <TD className="font-bold text-slate-900 tracking-tight">{item.blok_no}</TD>
                 <TD className="font-medium text-slate-600">{item.luas_tanah} m²</TD>
@@ -281,6 +285,53 @@ export default function ManageBlocks() {
             ))}
           </TBody>
         </Table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block md:hidden space-y-4 px-4 py-2">
+          {loading ? (
+            Array(3).fill(0).map((_, i) => (
+              <div key={i} className="h-32 bg-slate-50 rounded-2xl animate-pulse"></div>
+            ))
+          ) : sortedData.length === 0 ? (
+            <div className="text-center py-20 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
+              Data blok tidak ditemukan
+            </div>
+          ) : (
+            sortedData.map((item) => (
+              <Card key={item.id} className="p-4 flex flex-col gap-3 border border-slate-100 shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-900 tracking-tight">Blok {item.blok_no}</span>
+                    <span className="text-[10px] font-medium text-slate-400 mt-0.5">Luas Tanah: {item.luas_tanah} m²</span>
+                  </div>
+                  <Badge variant={
+                    item.status_hunian === 'Dihuni' ? 'blue' :
+                    item.status_hunian === 'Dikontrakkan' ? 'indigo' :
+                    item.status_hunian === 'Kosong Dikunjungi' ? 'amber' : 'slate'
+                  }>
+                    {item.status_hunian}
+                  </Badge>
+                </div>
+                
+                <div className="space-y-1 text-xs text-slate-500 font-medium py-2 border-y border-slate-50">
+                  <p className="flex justify-between"><span>Pemilik Aset:</span> <span className="text-slate-900 font-semibold">{item.nama_pemilik || "-"}</span></p>
+                  <p className="flex justify-between"><span>Kontak Pemilik:</span> <span className="text-slate-900">{item.kontak_pemilik || "-"}</span></p>
+                  <p className="flex justify-between"><span>Tgl Serah Terima:</span> <span className="text-slate-900">{item.tgl_serah_terima || "-"}</span></p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(item)} className="flex-1 text-slate-700">
+                    Edit
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleDelete(item.id)} className="flex-1 text-red-600 hover:bg-red-50 border-red-200">
+                    Hapus
+                  </Button>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
       </Card>
 
       <Modal 

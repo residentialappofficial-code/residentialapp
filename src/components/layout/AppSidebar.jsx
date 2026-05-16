@@ -18,13 +18,14 @@ import {
   LayoutGrid,
   Grid3X3,
   History,
-  ArrowRight
+  ArrowRight,
+  X
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 
-export function AppSidebar() {
+export function AppSidebar({ isOpen, onClose }) {
   const auth = useAuth();
   const signOut = auth?.signOut;
   const role = auth?.role;
@@ -68,16 +69,38 @@ export function AppSidebar() {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 w-64 h-screen bg-white text-slate-600 flex flex-col z-50 border-r border-slate-100">
-      {/* Sidebar Header */}
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center shrink-0">
-          <ShieldCheck className="w-5 h-5 text-white" />
+    <>
+      {/* Mobile Sidebar Overlay Backdrop */}
+      {isOpen && (
+        <div 
+          onClick={onClose}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden transition-all duration-300"
+        />
+      )}
+
+      <aside className={`
+        fixed left-0 top-0 w-64 h-screen bg-white text-slate-600 flex flex-col z-50 border-r border-slate-100 transition-transform duration-300 ease-in-out
+        lg:translate-x-0 
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Sidebar Header */}
+        <div className="p-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-indigo-600 rounded flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-lg text-slate-900 tracking-tighter leading-none">HABITIX</span>
+            </div>
+          </div>
+
+          <button 
+            onClick={onClose}
+            className="lg:hidden p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-all cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <div className="flex flex-col">
-          <span className="font-bold text-lg text-slate-900 tracking-tighter leading-none">HABITIX</span>
-        </div>
-      </div>
 
       {/* Sidebar Content */}
       <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
@@ -112,6 +135,7 @@ export function AppSidebar() {
                   <Link
                     key={itemIdx}
                     to={item.to}
+                    onClick={() => { if (window.innerWidth < 1024) onClose(); }}
                     className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                       isActive 
                         ? 'bg-indigo-50 text-indigo-600' 
@@ -134,6 +158,7 @@ export function AppSidebar() {
       <div className="p-6 mt-auto border-t border-slate-50 flex flex-col gap-4">
         <Link 
           to="/changelog" 
+          onClick={() => { if (window.innerWidth < 1024) onClose(); }}
           className="flex items-center justify-between px-4 py-2 rounded-lg hover:bg-slate-50 transition-all group"
         >
           <div className="flex items-center gap-2">
@@ -151,5 +176,6 @@ export function AppSidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }

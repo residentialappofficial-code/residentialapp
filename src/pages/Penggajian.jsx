@@ -215,6 +215,7 @@ export default function Penggajian() {
           }
         />
 
+        <div className="hidden md:block">
         <Table>
           <THead>
             <TR isHeader>
@@ -267,6 +268,50 @@ export default function Penggajian() {
             ))}
           </TBody>
         </Table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block md:hidden space-y-4 px-4 py-2">
+          {loading ? (
+            Array(3).fill(0).map((_, i) => (
+              <div key={i} className="h-32 bg-slate-50 rounded-2xl animate-pulse"></div>
+            ))
+          ) : filteredData.length === 0 ? (
+            <div className="text-center py-20 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
+              Data gaji tidak ditemukan
+            </div>
+          ) : (
+            filteredData.map((item) => (
+              <Card key={item.id} className="p-4 flex flex-col gap-3 border border-slate-100 shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-900 tracking-tight">{item.pengurus?.warga?.nama}</span>
+                    <span className="text-[10px] font-bold text-indigo-600 mt-0.5">{item.pengurus?.jabatan || "Staf"}</span>
+                  </div>
+                  <Badge variant="indigo">
+                    {new Date(0, item.bulan - 1).toLocaleString('id-ID', { month: 'short' })} {item.tahun}
+                  </Badge>
+                </div>
+                
+                <div className="flex justify-between items-center border-t border-slate-50 pt-3">
+                  <span className="text-sm font-bold text-slate-900 tracking-tight">
+                    <span className="text-[10px] opacity-40 mr-1">Rp</span>
+                    {item.jumlah?.toLocaleString()}
+                  </span>
+                  
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(item)} className="text-slate-700">
+                      Edit
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDelete(item.id)} className="text-red-600 hover:bg-red-50 border-red-200">
+                      Hapus
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
       </Card>
 
       {/* Modal */}

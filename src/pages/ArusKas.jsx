@@ -186,6 +186,7 @@ export default function ArusKas() {
           }
         />
 
+        <div className="hidden md:block">
         <Table>
           <THead>
             <TR isHeader>
@@ -236,6 +237,51 @@ export default function ArusKas() {
             ))}
           </TBody>
         </Table>
+        </div>
+
+        {/* Mobile View */}
+        <div className="block md:hidden space-y-4 px-4 py-2">
+          {loading ? (
+            Array(3).fill(0).map((_, i) => (
+              <div key={i} className="h-28 bg-slate-50 rounded-2xl animate-pulse"></div>
+            ))
+          ) : filteredData.length === 0 ? (
+            <div className="text-center py-20 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
+              Tidak ada data transaksi ditemukan.
+            </div>
+          ) : (
+            filteredData.map((item) => (
+              <Card key={item.id} className="p-4 flex flex-col gap-3 border border-slate-100 shadow-sm">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-bold text-slate-900 tracking-tight">{item.keterangan}</span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{new Date(item.tanggal).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  </div>
+                  <Badge variant={item.kategori === "Pemasukan" ? 'green' : 'red'}>
+                    {item.kategori}
+                  </Badge>
+                </div>
+                
+                <div className="flex justify-between items-center border-t border-slate-50 pt-3">
+                  <span className={`text-sm font-bold tracking-tight ${item.kategori === "Pemasukan" ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {item.kategori === "Pemasukan" ? '+' : '-'} Rp {item.jumlah?.toLocaleString()}
+                  </span>
+                  
+                  {profile?.role !== 'warga' && (
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(item)} className="text-slate-700">
+                        Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleDelete(item.id)} className="text-red-600 hover:bg-red-50 border-red-200">
+                        Hapus
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
       </Card>
 
       <Modal 
