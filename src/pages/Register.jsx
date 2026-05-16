@@ -79,16 +79,18 @@ export default function Register() {
   return (
     <div className="flex min-h-screen w-full bg-slate-50 font-sans overflow-hidden">
       {/* Left Side: Branding */}
-      <div className="hidden lg:flex flex-1 bg-slate-950 text-white p-24 flex-col justify-between relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[900px] h-[900px] bg-white/[0.04] rounded-full blur-[140px] -mr-96 -mt-96"></div>
-        <div className="absolute bottom-0 left-0 w-[700px] h-[700px] bg-white/[0.02] rounded-full blur-[120px] -ml-64 -mb-64"></div>
+      <div className="hidden lg:flex lg:w-1/2 bg-slate-950 text-white p-20 flex-col justify-between relative overflow-hidden">
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-white/[0.03] blur-[120px] rounded-full -mr-40 -mt-40 animate-pulse"></div>
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-white/[0.02] blur-[100px] rounded-full -ml-40 -mb-40"></div>
+        <div className="absolute top-1/4 left-1/4 w-px h-64 bg-gradient-to-b from-transparent via-white/10 to-transparent"></div>
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-5 mb-40">
-            <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center shadow-2xl shadow-white/10">
-              <ShieldCheck className="w-9 h-9 text-black" />
+        <div className="relative z-10 slide-up-fade-in" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center gap-4 mb-24 group cursor-default">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-2xl transition-transform group-hover:rotate-12">
+              <ShieldCheck className="w-7 h-7 text-black" />
             </div>
-            <span className="text-3xl font-bold tracking-tighter">HABITIX</span>
+            <span className="text-2xl font-black tracking-tighter">HABITIX</span>
           </div>
           
           <div className="max-w-2xl space-y-12">
@@ -119,7 +121,11 @@ export default function Register() {
         </div>
 
         <div className="relative z-10 flex justify-between items-center text-[10px] font-bold text-slate-600 uppercase tracking-[0.4em]">
-          <span>© 2026 HABITIX Ecosystem</span>
+          <div className="flex items-center gap-6">
+            <span>© 2026 HABITIX ECOSYSTEM</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-800"></div>
+            <span>v3.0.3</span>
+          </div>
           <div className="flex gap-10">
             <span className="hover:text-white transition-colors cursor-pointer">Security</span>
             <span className="hover:text-white transition-colors cursor-pointer">Compliance</span>

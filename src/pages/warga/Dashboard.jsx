@@ -219,9 +219,9 @@ export default function WargaDashboard() {
             <LayoutDashboard size={20} className="text-indigo-500" /> Akses Cepat
           </h2>
           <div className="flex flex-col gap-3">
-            <QuickAction icon={ReceiptText} label="Lihat Detail Tagihan" to="/my-bills" color="red" />
-            <QuickAction icon={Package} label="Ajukan Pinjam Aset" to="/borrow-assets" color="indigo" />
-            <QuickAction icon={MessageSquare} label="Diskusi di Forum" to="/forum" color="green" />
+            <QuickAction label="Lihat Detail Tagihan" to="/my-bills" color="red" />
+            <QuickAction label="Ajukan Pinjam Aset" to="/borrow-assets" color="indigo" />
+            <QuickAction label="Diskusi di Forum" to="/forum" color="green" />
           </div>
         </div>
       </div>

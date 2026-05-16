@@ -2,6 +2,19 @@
 
 All notable changes to the HABITIX platform will be documented in this file.
 
+## [3.0.3] - 2026-05-16
+
+### Added
+- **Premium Auth UI**: Redesigned Login, Register, and Forgot Password with monochrome slate-900 premium system.
+- **Micro-Animations**: Added slide-up-fade-in entry transitions for authentication elements.
+
+### Fixed
+- **Sidebar ReferenceError**: Resolved `ArrowRight is not defined` runtime error.
+
+### Improved
+- **Dashboard Cleanup**: Removed unused props and variables from the main Dashboard component.
+
+
 ## [3.0.1] - 2026-05-16
 
 ### Added

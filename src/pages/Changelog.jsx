@@ -5,9 +5,20 @@ import { Card, Badge, Button } from "@/components/ui";
 export default function Changelog() {
   const versions = [
     {
-      version: "3.0.1",
+      version: "3.0.3",
       date: "16 Mei 2026",
       status: "Latest",
+      changes: [
+        { type: "added", text: "Redesain premium untuk halaman Login, Register, dan Lupa Kata Sandi." },
+        { type: "added", text: "Integrasi animasi slide-up-fade-in pada elemen autentikasi." },
+        { type: "fixed", text: "Resolusi 'ReferenceError: ArrowRight is not defined' pada Sidebar." },
+        { type: "improved", text: "Pembersihan props tidak terpakai pada komponen Dashboard." }
+      ]
+    },
+    {
+      version: "3.0.1",
+      date: "16 Mei 2026",
+      status: "Stable",
       changes: [
         { type: "added", text: "Fitur sembunyikan/tampilkan kata sandi di halaman Login & Register." },
         { type: "added", text: "Sistem desain monokrom premium slate-900 di seluruh modul." },

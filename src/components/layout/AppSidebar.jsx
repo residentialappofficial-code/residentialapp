@@ -17,7 +17,8 @@ import {
   Hammer,
   LayoutGrid,
   Grid3X3,
-  History
+  History,
+  ArrowRight
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -137,7 +138,7 @@ export function AppSidebar() {
         >
           <div className="flex items-center gap-2">
             <History size={14} className="text-slate-400 group-hover:text-indigo-600" />
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-slate-900">Versi 3.0.1</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-slate-900">Versi 3.0.3</span>
           </div>
           <ArrowRight size={10} className="text-slate-300 group-hover:text-slate-900 opacity-0 group-hover:opacity-100 transition-all" />
         </Link>
