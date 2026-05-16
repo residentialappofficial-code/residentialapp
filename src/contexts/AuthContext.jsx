@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }) => {
         perumahanId = wargaData.perumahan_id;
         finalProfile = { 
           ...wargaData, 
-          id: user.id, // Ensure profile.id is Auth ID
+          id: userId, // Ensure profile.id is Auth ID
           warga_id: wargaData.id, // Store Warga Record ID
           role: normalizedRole 
         };

@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Table, THead, TBody, TR, TH, TD, Badge, Modal, Select, ConfirmModal } from "@/components/ui";
 import { calculateFinance, formatCurrency, formatDate } from "@/utils/financeUtils";
 
-export const monthsFull = [
+const monthsFull = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember"
 ];
@@ -64,7 +64,7 @@ export default function ResidentFees() {
       years.push(y);
     }
     return years;
-  }, [warga, allBills]);
+  }, [warga]);
 
   const fetchData = useCallback(async () => {
     if (!selectedPerumahanId) return;
@@ -324,9 +324,18 @@ export default function ResidentFees() {
                 return (
                   <TR key={w.id} className="group hover:bg-slate-50/50 transition-all text-[11px]">
                     <TD className="sticky left-0 bg-white group-hover:bg-slate-50/50 z-10 border-r border-slate-100 transition-colors py-4">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold text-slate-900 tracking-tight">{w.blok}</span>
-                        <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider truncate w-32">{w.nama}</span>
+                      <div className="flex justify-between items-center gap-2 pr-2">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-bold text-slate-900 tracking-tight">{w.blok}</span>
+                          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider truncate w-32">{w.nama}</span>
+                        </div>
+                        <button 
+                          onClick={() => openWargaBills(w)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-all cursor-pointer"
+                          title="Lihat Detail Riwayat"
+                        >
+                          <Eye size={14} />
+                        </button>
                       </div>
                     </TD>
                     <TD className="text-xs font-medium text-slate-600 whitespace-nowrap w-px">

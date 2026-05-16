@@ -34,7 +34,6 @@ export default function ManageRoles() {
   const { selectedPerumahanId } = useAuth();
   const { isOwner } = usePermissions();
   const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -46,7 +45,6 @@ export default function ManageRoles() {
 
   const fetchRoles = useCallback(async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('perumahan_roles')
         .select('*')
@@ -57,8 +55,6 @@ export default function ManageRoles() {
       setRoles(data || []);
     } catch (err) {
       alert("Gagal memuat peran: " + err.message);
-    } finally {
-      setLoading(false);
     }
   }, [selectedPerumahanId]);
 

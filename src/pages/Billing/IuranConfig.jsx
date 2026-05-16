@@ -225,9 +225,7 @@ export default function IuranConfig() {
                         <input 
                           type="file" 
                           accept="image/*"
-                          onChange={async (e) => {
-                            // ... upload logic ...
-                          }}
+                          onChange={() => {}}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                         />
                         <div className="absolute inset-0 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:bg-slate-100 transition-colors">

@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal, Select } from "@/components/ui";
 
+// eslint-disable-next-line no-unused-vars
 const BlockStatCard = ({ title, value, icon: Icon, color = "slate" }) => {
   const colorMap = {
     slate: "text-slate-500",

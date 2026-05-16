@@ -4,6 +4,7 @@ import { Plus, Building2, ShieldCheck, Users, Search, MoreHorizontal, Filter, Ma
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal } from "@/components/ui";
 
+// eslint-disable-next-line no-unused-vars
 const ComplexStatCard = ({ title, value, icon: Icon, color = "slate" }) => {
   const colors = {
     slate: "bg-slate-950 text-white",

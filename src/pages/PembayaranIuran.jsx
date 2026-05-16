@@ -113,7 +113,7 @@ export default function PembayaranIuran() {
             <THead>
               <TR isHeader>
                 <TH className="sticky left-0 bg-white z-10 border-r border-slate-100 min-w-[200px]">Warga / Unit Identitas</TH>
-                {months.map((m, i) => (
+                {months.map((m) => (
                   <TH key={m} textAlign="center" className="min-w-[80px] text-[10px] uppercase tracking-wider">{m.substring(0, 3)}</TH>
                 ))}
               </TR>

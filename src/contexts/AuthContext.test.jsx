@@ -23,9 +23,8 @@ describe('AuthContext', () => {
     
     const { result } = renderHook(() => useAuth(), { wrapper });
     
-    let signOutResult;
     await act(async () => {
-      signOutResult = await result.current.signOut();
+      await result.current.signOut();
     });
 
     expect(supabase.auth.signOut).toHaveBeenCalled();

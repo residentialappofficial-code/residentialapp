@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal, Select } from "@/components/ui";
 import { SelectionRequired } from "@/components/ui/SelectionRequired";
 
+// eslint-disable-next-line no-unused-vars
 const PayrollStatCard = ({ title, value, icon: Icon, type = "neutral" }) => {
   const styles = {
     neutral: "bg-slate-950 text-white",

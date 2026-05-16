@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SelectionRequired } from "@/components/ui/SelectionRequired";
 import { PermissionGuard } from "@/components/PermissionGuard";
 
+// eslint-disable-next-line no-unused-vars
 const ResidentStatCard = ({ title, value, icon: Icon, color = "slate" }) => {
   const colorMap = {
     slate: "text-slate-500",
@@ -431,6 +432,7 @@ export default function DataWarga() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleMutation = async (wargaId) => {
     if (!window.confirm("Proses mutasi/pindah warga ini? Akun akan dinonaktifkan.")) return;
     
