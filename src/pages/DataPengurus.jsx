@@ -303,7 +303,7 @@ export default function DataPengurus() {
             </div>
           ) : (
             filteredData.map((item) => (
-              <Card key={item.id} className="flex flex-col gap-4 !border-none shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300">
+              <Card key={item.id} className="flex flex-col gap-4">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">{item.warga?.nama}</span>
