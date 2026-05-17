@@ -804,7 +804,7 @@ export default function DataWarga() {
           <div className="flex gap-3 w-full">
             <Button variant="ghost" className="flex-1 py-2.5 font-semibold text-xs uppercase tracking-wider" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button variant="primary" className="flex-1 py-2.5 font-semibold text-xs uppercase tracking-wider" onClick={handleAddWarga} isLoading={isSubmitting}>
-              {isEditMode ? "Finalize Updates" : "Complete Registry"}
+              Simpan
             </Button>
           </div>
         }
