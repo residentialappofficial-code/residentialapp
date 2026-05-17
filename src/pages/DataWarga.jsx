@@ -532,11 +532,11 @@ export default function DataWarga() {
           title="Registri Unit" 
           subtitle="Database administratif komprehensif seluruh warga komplek"
           action={
-            <div className="flex gap-4">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
               <Select 
                 value={filterStatus} 
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-48 h-full"
+                className="w-full sm:w-48 h-full"
               >
                 <option value="Semua Status">Semua Penghuni</option>
                 <option value="Pemilik">Pemilik</option>
@@ -547,7 +547,7 @@ export default function DataWarga() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 icon={Search}
-                className="w-80"
+                className="w-full sm:w-80"
               />
             </div>
           }
@@ -671,11 +671,11 @@ export default function DataWarga() {
             </div>
           ) : (
             sortedData.map((item) => (
-              <Card key={item.id} className="p-4 flex flex-col gap-4 border border-slate-100 shadow-sm">
+              <Card key={item.id} className="flex flex-col gap-4">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">{item.nama}</span>
-                    <span className="text-xs font-semibold text-indigo-600 mt-0.5">Blok {item.blok}</span>
+                    <span className="text-xs font-semibold text-indigo-600 mt-0.5">Blok {item.blok?.blok_no || "-"}</span>
                   </div>
                   <Badge variant={item.status === 'aktif' ? 'green' : 'amber'}>
                     {item.status || 'aktif'}
