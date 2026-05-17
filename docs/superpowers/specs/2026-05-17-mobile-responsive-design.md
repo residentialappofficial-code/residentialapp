@@ -66,9 +66,36 @@ We target the following key pages with custom card layouts:
 
 ---
 
+## 4. Standar Desain Sistem Pop-up (Modal) Responsif
+
+Untuk memastikan konsistensi dan kegunaan tingkat tinggi pada seluruh formulir modal di aplikasi Habitix, semua pop-up harus mematuhi panduan desain sistem berikut:
+
+### A. Anatomi Kerangka Modal (Modal Layout)
+- **Margin Luar Dinamis**: Pada layar mobile, gunakan lebar dinamis untuk menjamin margin tepat **16px** di sisi kiri dan kanan:
+  ```javascript
+  w-full max-w-[calc(100vw-32px)] md:max-w-2xl max-h-[calc(100vh-32px)] flex flex-col
+  ```
+- **Padding Internal Seragam**: Seluruh komponen Header, Body, dan Footer modal harus menggunakan padding tepat **16px** (`p-4` atau `space-y-4` / `gap-4`). Padding `24px` (`p-6`) dilarang untuk memaksimalkan ruang guna layar seluler.
+- **Scrollable Form & Sticky Footer**:
+  - Modal harus menggunakan layout vertikal (`flex flex-col`).
+  - Bagian Header dan Footer disetel sebagai `shrink-0` agar tetap kokoh di posisinya (Footer tombol aksi menjadi **Sticky** di bawah).
+  - Bagian Body disetel sebagai `flex-1 overflow-y-auto` agar formulir di dalamnya dapat digulung secara mulus tanpa memotong aksi simpan/batal.
+
+### B. Arsitektur Tata Letak Formulir (Form Fields Layout)
+- **Desain 1 Kolom Vertikal Penuh**: Formulir di dalam modal wajib disajikan dalam susunan **1 kolom vertikal saja** (`flex flex-col` atau `grid-cols-1`). Pembagian kolom menjadi 2 (`grid-cols-2`) dilarang karena membuat isian sangat sempit dan tidak ramah seluler.
+- **Jarak Antar Masukan Presisi 12px**: Jarak antar kolom input atau grup masukan harus disetel tepat **12px** (`gap-3` atau `space-y-3`) guna menciptakan kepadatan informasi (*information density*) yang seimbang dan profesional.
+
+### C. Komponen Input & Detail Tanggal (Global Input & Date Picker Spacing)
+- **Padding Simetris Global**: Komponen input dengan ikon kustom menggunakan padding kiri `pl-11` (44px) dan padding kanan standar `pr-4` (16px).
+- **Penempatan Ikon Kalender Browser**: Elemen tanggal (`type="date"`) mematuhi padding kanan default `pr-4` (16px). Hal ini secara otomatis menyeimbangkan letak ikon kalender kustom di kiri (`left-4` / 16px) dengan letak ikon pemilih tanggal bawaan browser di kanan (tetap presisi berjarak 16px dari tepi kanan input), tanpa menyebabkan adanya kekosongan area teks yang berlebihan (*overlap prevention*).
+
+---
+
 ## Success Criteria
 1. **Flawless Mobile Shell**: Sidebar transitions seamlessly from fixed side-panel to mobile slide-over drawer with overlay backdrop.
 2. **0% Desktop Regression**: The desktop view remains exactly identical in design, alignment, actions, and layouts.
 3. **Table-to-Card Execution**: Tables on all listed pages successfully transform into clean modern cards on screen sizes `< 768px` (`md`).
 4. **Action Stability**: All actions (Modals, popups, API triggers) work perfectly from both the desktop table rows and mobile cards.
-5. **Linting & Verification**: Zero ESLint errors or warnings, all builds succeed, all tests pass.
+5. **Pop-up Desain Sistem Compliance**: Seluruh modal menggunakan margin 16px luar, padding 16px dalam, 1 kolom layout vertikal dengan jarak form 12px, dan tombol aksi sticky di footer.
+6. **Linting & Verification**: Zero ESLint errors or warnings, all builds succeed, all tests pass.
+
