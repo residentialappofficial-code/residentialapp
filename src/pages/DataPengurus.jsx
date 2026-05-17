@@ -175,7 +175,7 @@ export default function DataPengurus() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 md:gap-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Organisasi Pengurus</h1>
@@ -191,7 +191,7 @@ export default function DataPengurus() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
         <StaffStatCard title="Pengurus Aktif" value={data.length} icon={Shield} type="neutral" />
         <StaffStatCard title="Periode Berjalan" value="2025-2027" icon={Calendar} type="blue" />
         <StaffStatCard title="Status Verifikasi" value="Verified" icon={UserCheck} type="success" />

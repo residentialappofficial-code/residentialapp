@@ -89,6 +89,10 @@ Untuk memastikan konsistensi dan kegunaan tingkat tinggi pada seluruh formulir m
 - **Padding Simetris Global**: Komponen input dengan ikon kustom menggunakan padding kiri `pl-11` (44px) dan padding kanan standar `pr-4` (16px).
 - **Penempatan Ikon Kalender Browser**: Elemen tanggal (`type="date"`) mematuhi padding kanan default `pr-4` (16px). Hal ini secara otomatis menyeimbangkan letak ikon kalender kustom di kiri (`left-4` / 16px) dengan letak ikon pemilih tanggal bawaan browser di kanan (tetap presisi berjarak 16px dari tepi kanan input), tanpa menyebabkan adanya kekosongan area teks yang berlebihan (*overlap prevention*).
 
+### D. Jarak Antar Konten & Section Mobile (Mobile Spacing)
+- **Jarak Antar Konten Dinamis**: Jarak vertikal antar elemen, section utama, stat cards, maupun card daftar tabel pada layar seluler dibatasi tepat **16px** (`gap-4` atau `space-y-4`). Ini mencegah pemborosan ruang layar seluler (*scrolling fatigue*).
+- **Transisi Responsif**: Manfaatkan utility responsif Tailwind seperti `space-y-4 md:space-y-8` atau `gap-4 md:gap-8` agar kepadatan tinggi di mobile (16px) tetap berpadu serasi dengan tata letak lapang (32px) di desktop.
+
 ---
 
 ## Success Criteria

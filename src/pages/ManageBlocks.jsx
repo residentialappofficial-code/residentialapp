@@ -176,8 +176,8 @@ export default function ManageBlocks() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-4 md:space-y-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Manajemen Blok</h1>
           <p className="text-slate-500 text-sm mt-1">Kelola unit rumah, luas tanah, dan tanggal serah terima.</p>
@@ -192,7 +192,7 @@ export default function ManageBlocks() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
         <BlockStatCard title="Total Unit" value={data.length} icon={Building2} color="slate" />
         <BlockStatCard title="Terhuni" value={data.filter(b => b.status_hunian !== 'Kosong').length} icon={ShieldCheck} color="blue" />
         <BlockStatCard title="Kosong" value={data.filter(b => b.status_hunian === 'Kosong').length} icon={X} color="amber" />

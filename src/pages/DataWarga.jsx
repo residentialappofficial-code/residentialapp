@@ -497,7 +497,7 @@ export default function DataWarga() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 md:gap-8">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center justify-between w-full md:w-auto">
@@ -553,7 +553,7 @@ export default function DataWarga() {
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-6">
         <ResidentStatCard title="Total Penghuni" value={data.length} icon={Users} color="slate" />
         <ResidentStatCard title="Pemilik" value={data.filter(w => w.status_hunian === 'Pemilik').length} icon={Home} color="blue" />
         <ResidentStatCard title="Pengontrak" value={data.filter(w => w.status_hunian === 'Pengontrak').length} icon={Users} color="indigo" />
