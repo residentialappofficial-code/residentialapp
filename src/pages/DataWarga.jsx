@@ -800,16 +800,24 @@ export default function DataWarga() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         title={isEditMode ? "Modify Resident Data" : "New Resident Onboarding"}
+        footer={
+          <div className="flex gap-3 w-full">
+            <Button variant="ghost" className="flex-1 py-2.5 font-semibold text-xs uppercase tracking-wider" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" className="flex-1 py-2.5 font-semibold text-xs uppercase tracking-wider" onClick={handleAddWarga} isLoading={isSubmitting}>
+              {isEditMode ? "Finalize Updates" : "Complete Registry"}
+            </Button>
+          </div>
+        }
       >
-        <div className="space-y-8 p-2">
-          <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-xl border border-slate-100">
+        <div className="space-y-3 p-1">
+          <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
             <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <p className="text-xs text-slate-500 font-medium leading-relaxed">Ensure all identifier data matches legal unit documentation for billing accuracy.</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-10">
+          <div className="flex flex-col gap-3">
             <Input 
               label="Nama Lengkap Sesuai Identitas"
               required 
@@ -831,7 +839,7 @@ export default function DataWarga() {
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-10">
+          <div className="flex flex-col gap-3">
             <Input 
               label="Email Administratif"
               type="email"
@@ -848,7 +856,8 @@ export default function DataWarga() {
               icon={Phone}
             />
           </div>
-          <div className="grid grid-cols-2 gap-10">
+          
+          <div className="flex flex-col gap-3">
             <Input 
               label="Tgl Serah Terima (Opsional)"
               type="date"
@@ -867,8 +876,8 @@ export default function DataWarga() {
           </div>
 
           {formData.status_hunian === 'Pengontrak' && (
-            <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
-              <div className="flex items-center gap-3 mb-2">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-slate-200 shadow-sm text-slate-400">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
@@ -877,7 +886,7 @@ export default function DataWarga() {
                   <p className="text-[10px] text-slate-500 font-medium">Data administratif pemilik rumah asli</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-10">
+              <div className="flex flex-col gap-3">
                 <Input 
                   label="Nama Pemilik"
                   value={formData.nama_pemilik} 
@@ -897,7 +906,7 @@ export default function DataWarga() {
           )}
 
           {!isEditMode && (
-            <div className="space-y-6 pt-4 border-t border-slate-100">
+            <div className="space-y-3 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
@@ -930,13 +939,6 @@ export default function DataWarga() {
               )}
             </div>
           )}
-
-          <div className="flex gap-4 pt-6">
-            <Button variant="ghost" className="flex-1 py-2.5 font-semibold" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" className="flex-1 py-2.5 font-semibold" onClick={handleAddWarga} isLoading={isSubmitting}>
-              {isEditMode ? "Finalize Updates" : "Complete Registry"}
-            </Button>
-          </div>
         </div>
       </Modal>
 
@@ -1017,8 +1019,16 @@ export default function DataWarga() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         title="Import Residents from Google Sheets"
+        footer={
+          <div className="flex gap-3 w-full">
+            <Button variant="ghost" className="flex-1 py-2.5 font-semibold text-xs uppercase tracking-wider" onClick={() => setIsImportModalOpen(false)}>Cancel</Button>
+            <Button variant="primary" className="flex-1 py-2.5 font-semibold text-xs uppercase tracking-wider" onClick={handleImport} isLoading={isImporting}>
+              Start Import
+            </Button>
+          </div>
+        }
       >
-        <div className="space-y-8 p-2">
+        <div className="space-y-6 p-1">
           <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-xl border border-slate-100">
             <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white shrink-0">
               <Database className="w-5 h-5" />
@@ -1038,13 +1048,6 @@ export default function DataWarga() {
             placeholder="https://docs.google.com/spreadsheets/d/..."
             icon={Map}
           />
-
-          <div className="flex gap-4 pt-6">
-            <Button variant="ghost" className="flex-1 py-2.5 font-semibold" onClick={() => setIsImportModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" className="flex-1 py-2.5 font-semibold" onClick={handleImport} isLoading={isImporting}>
-              Start Import
-            </Button>
-          </div>
         </div>
       </Modal>
       {/* Mobile Floating Action Button (FAB) */}
