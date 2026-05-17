@@ -156,8 +156,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Chart */}
         <div className="lg:col-span-8">
-          <Card className="p-6 h-full flex flex-col">
-            <div className="flex justify-between items-center mb-8">
+          <Card className="p-4 h-full flex flex-col">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
@@ -169,7 +169,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1 overflow-x-auto scrollbar-hide py-1">
                 {['1m', '5m', '15m', '1h', '4h', '1D'].map(t => (
                   <Button 
                     key={t} 

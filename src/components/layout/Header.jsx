@@ -33,7 +33,7 @@ export function Header({ onMenuClick }) {
             </div>
           )}
 
-          <div className="relative w-64 md:w-80 group">
+          <div className="hidden md:block relative w-64 md:w-80 group">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
             </div>
