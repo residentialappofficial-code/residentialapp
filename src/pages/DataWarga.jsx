@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Edit, Trash2, Download, UserPlus, X, UserMinus, Users, Home, Map, Database, ArrowRight, ShieldCheck, UserCircle, Building2, Mail, Phone, KeyRound, Eye, ArrowUpDown, Calendar, MoreVertical } from "lucide-react";
+import { Search, Edit, Trash2, Download, UserPlus, X, UserMinus, Users, Home, Map, Database, ArrowRight, ShieldCheck, UserCircle, Building2, Mail, Phone, KeyRound, Eye, ArrowUpDown, Calendar, MoreVertical, Upload } from "lucide-react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabase";
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from "@/contexts/AuthContext";
@@ -495,14 +495,20 @@ export default function DataWarga() {
         <div className="flex items-center gap-3">
           <PermissionGuard module="warga" action="create">
             <Button 
-              variant="ghost" 
-              icon={Download} 
+              variant="outline" 
+              icon={Upload} 
               onClick={() => setIsImportModalOpen(true)}
-              className="text-slate-400 hover:text-slate-900"
-            >Impor Data</Button>
+              className="w-9 h-9 !p-0 text-slate-400 hover:text-slate-950 border-slate-200 rounded-xl"
+              title="Impor Data"
+            />
           </PermissionGuard>
           
-          <Button variant="ghost" icon={Download} className="text-slate-400 hover:text-slate-900">Ekspor Data</Button>
+          <Button 
+            variant="outline" 
+            icon={Download} 
+            className="w-9 h-9 !p-0 text-slate-400 hover:text-slate-950 border-slate-200 rounded-xl"
+            title="Ekspor Data"
+          />
           
           <PermissionGuard module="warga" action="create">
             <Button variant="primary" icon={UserPlus} onClick={() => {
