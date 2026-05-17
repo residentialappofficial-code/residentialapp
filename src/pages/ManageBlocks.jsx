@@ -186,6 +186,7 @@ export default function ManageBlocks() {
           onClick={() => { setIsEditMode(false); setIsModalOpen(true); }}
           variant="primary" 
           icon={Plus}
+          className="hidden md:flex"
         >
           Tambah Blok
         </Button>
@@ -300,7 +301,7 @@ export default function ManageBlocks() {
             </div>
           ) : (
             sortedData.map((item) => (
-              <Card key={item.id} className="!p-3 flex flex-col gap-2 border border-slate-100 shadow-none !overflow-visible">
+              <Card key={item.id} noPadding className="p-3 flex flex-col gap-2 border border-slate-100 shadow-none !overflow-visible">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">Blok {item.blok_no}</span>
@@ -437,6 +438,15 @@ export default function ManageBlocks() {
           </div>
         </form>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={() => { setIsEditMode(false); setIsModalOpen(true); }}
+        className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+        title="Tambah Blok"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }
