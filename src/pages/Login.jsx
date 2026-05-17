@@ -146,9 +146,12 @@ export default function Login() {
             </form>
           </div>
 
-          <div className="mt-12 text-center">
+          <div className="mt-12 text-center space-y-4">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">
               Belum terdaftar? <Link to="/register" className="text-slate-950 font-black hover:text-indigo-600 ml-2 border-b-2 border-slate-100 hover:border-indigo-100 transition-all pb-1">Minta Akses Sekarang</Link>
+            </p>
+            <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em] pt-2">
+              HABITIX v3.0.3
             </p>
           </div>
         </div>
