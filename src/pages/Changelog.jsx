@@ -77,7 +77,7 @@ export default function Changelog() {
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{v.date}</span>
               </div>
 
-              <Card className="p-4 hover:shadow-md transition-shadow">
+              <Card className="hover:shadow-md transition-shadow">
                 <div className="grid grid-cols-1 gap-4">
                   {v.changes.map((change, ci) => (
                     <div key={ci} className="flex items-start gap-4 group">

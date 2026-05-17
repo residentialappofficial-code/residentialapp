@@ -156,7 +156,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Main Chart */}
         <div className="lg:col-span-8">
-          <Card className="p-4 h-full flex flex-col">
+          <Card className="h-full flex flex-col">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-8">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -214,7 +214,7 @@ export default function Dashboard() {
 
         {/* Right Insights */}
         <div className="lg:col-span-4 flex flex-col gap-4">
-          <Card className="p-5">
+          <Card>
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                 <AlertCircle className="w-3.5 h-3.5 text-indigo-500" /> Analitik Keuangan
@@ -237,7 +237,7 @@ export default function Dashboard() {
             </Button>
           </Card>
 
-          <Card className="p-5 flex-1">
+          <Card className="flex-1">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-bold text-slate-900">Top Tunggakan Alert</h3>
               <span className="text-xs text-indigo-600 font-medium cursor-pointer">View All</span>
@@ -267,7 +267,7 @@ export default function Dashboard() {
 
       {/* Bottom Area */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-5">
+        <Card>
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-sm font-bold text-slate-900">Aktivitas Terbaru</h3>
             <span className="text-xs text-indigo-600 font-medium cursor-pointer">View All</span>
@@ -301,7 +301,7 @@ export default function Dashboard() {
         </Card>
         
         {/* Placeholder for remaining layout space to match grid */}
-        <Card className="p-5 flex flex-col justify-center items-center opacity-50">
+        <Card className="flex flex-col justify-center items-center opacity-50">
           <Layers className="w-8 h-8 text-slate-300 mb-2" />
           <p className="text-xs font-medium text-slate-400">Modul Tambahan</p>
         </Card>
