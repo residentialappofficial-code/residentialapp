@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Edit, Trash2, Download, UserPlus, X, UserMinus, Users, Home, Map, Database, ArrowRight, ShieldCheck, UserCircle, Building2, Mail, Phone, KeyRound, Eye, ArrowUpDown, Calendar, MoreVertical, Upload } from "lucide-react";
+import { Search, Edit, Trash2, Download, UserPlus, X, UserMinus, Users, Home, Map, Database, ArrowRight, ShieldCheck, UserCircle, Building2, Mail, Phone, KeyRound, Eye, ArrowUpDown, Calendar, MoreVertical, Upload, Plus } from "lucide-react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabase";
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from "@/contexts/AuthContext";
@@ -162,6 +162,18 @@ export default function DataWarga() {
     } catch (err) {
       alert("Gagal menghapus: " + err.message);
     }
+  };
+
+  const handleOpenCreateModal = () => {
+    setIsEditMode(false);
+    setEditingId(null);
+    setFormData({
+      nama: "", blok: "", no_hp: "", email: "", 
+      status_hunian: "Pemilik", blok_id: "", 
+      nama_pemilik: "", kontak_pemilik: "", tgl_serah_terima: "",
+      createAccount: false, password: ""
+    });
+    setIsModalOpen(true);
   };
 
   const handleEdit = (item) => {
@@ -488,11 +500,33 @@ export default function DataWarga() {
     <div className="flex flex-col gap-8">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Database Warga</h1>
-          <p className="text-slate-500 text-sm mt-1">Kelola identitas unit, status hunian, dan data luas tanah.</p>
+        <div className="flex items-center justify-between w-full md:w-auto">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Database Warga</h1>
+            <p className="text-slate-500 text-sm mt-1 hidden sm:block">Kelola identitas unit, status hunian, dan data luas tanah.</p>
+          </div>
+          {/* Mobile Actions: Import/Export side-by-side with Title */}
+          <div className="flex items-center gap-2 md:hidden">
+            <PermissionGuard module="warga" action="create">
+              <Button 
+                variant="outline" 
+                icon={Upload} 
+                onClick={() => setIsImportModalOpen(true)}
+                className="w-9 h-9 !p-0 text-slate-400 hover:text-slate-950 border-slate-200 rounded-xl"
+                title="Impor Data"
+              />
+            </PermissionGuard>
+            <Button 
+              variant="outline" 
+              icon={Download} 
+              className="w-9 h-9 !p-0 text-slate-400 hover:text-slate-950 border-slate-200 rounded-xl"
+              title="Ekspor Data"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        {/* Desktop Actions */}
+        <div className="hidden md:flex items-center gap-3">
           <PermissionGuard module="warga" action="create">
             <Button 
               variant="outline" 
@@ -511,17 +545,9 @@ export default function DataWarga() {
           />
           
           <PermissionGuard module="warga" action="create">
-            <Button variant="primary" icon={UserPlus} onClick={() => {
-              setIsEditMode(false);
-              setEditingId(null);
-              setFormData({
-                nama: "", blok: "", no_hp: "", email: "", 
-                status_hunian: "Pemilik", blok_id: "", 
-                nama_pemilik: "", kontak_pemilik: "", tgl_serah_terima: "",
-                createAccount: false, password: ""
-              });
-              setIsModalOpen(true);
-            }}>Tambah Warga</Button>
+            <Button variant="primary" icon={UserPlus} onClick={handleOpenCreateModal}>
+              Tambah Warga
+            </Button>
           </PermissionGuard>
         </div>
       </div>
@@ -1021,6 +1047,16 @@ export default function DataWarga() {
           </div>
         </div>
       </Modal>
+      {/* Mobile Floating Action Button (FAB) */}
+      <PermissionGuard module="warga" action="create">
+        <button 
+          onClick={handleOpenCreateModal}
+          className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+          title="Tambah Warga"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      </PermissionGuard>
     </div>
   );
 }
