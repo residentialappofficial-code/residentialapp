@@ -77,7 +77,7 @@ export default function Login() {
       </div>
 
       {/* Sisi Kanan: Form (Bahasa Indonesia & Proporsional) */}
-      <div className="flex-1 flex items-center justify-center p-8 lg:p-16 relative bg-white">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 lg:p-16 relative bg-white">
         <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl -mr-32 -mt-32"></div>
         <div className="absolute bottom-0 left-0 w-96 h-96 bg-slate-50 rounded-full blur-3xl -ml-48 -mb-48"></div>
 
@@ -92,7 +92,7 @@ export default function Login() {
             <p className="text-slate-500 font-medium text-sm">Masukkan kredensial Anda untuk mengakses portal.</p>
           </div>
 
-          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] transition-all duration-500">
+          <div className="bg-white p-4 sm:p-10 rounded-2xl sm:rounded-[2.5rem] border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.06)] transition-all duration-500">
             <form onSubmit={handleSubmit} className="space-y-10">
               <div className="space-y-8">
                 <Input 
