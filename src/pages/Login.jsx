@@ -71,7 +71,7 @@ export default function Login() {
           <div className="flex items-center gap-6 text-[10px] font-bold text-slate-600 uppercase tracking-[0.4em] pt-10 border-t border-white/5">
             <span>© 2026 HABITIX</span>
             <div className="w-1.5 h-1.5 rounded-full bg-slate-800"></div>
-            <span>Versi 3.0.3</span>
+            <span>Versi 0.3.3</span>
           </div>
         </div>
       </div>
@@ -151,7 +151,7 @@ export default function Login() {
               Belum terdaftar? <Link to="/register" className="text-slate-950 font-black hover:text-indigo-600 ml-2 border-b-2 border-slate-100 hover:border-indigo-100 transition-all pb-1">Minta Akses Sekarang</Link>
             </p>
             <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.4em] pt-2">
-              HABITIX v3.0.3
+              HABITIX v0.3.3
             </p>
           </div>
         </div>
