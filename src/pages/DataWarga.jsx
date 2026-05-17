@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Edit, Trash2, Download, UserPlus, X, UserMinus, Users, Home, Map, Database, ArrowRight, ShieldCheck, UserCircle, Building2, Mail, Phone, KeyRound, Eye, ArrowUpDown, Calendar } from "lucide-react";
+import { Search, Edit, Trash2, Download, UserPlus, X, UserMinus, Users, Home, Map, Database, ArrowRight, ShieldCheck, UserCircle, Building2, Mail, Phone, KeyRound, Eye, ArrowUpDown, Calendar, MoreVertical } from "lucide-react";
 import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabase";
 import { createClient } from '@supabase/supabase-js';
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,6 +58,7 @@ export default function DataWarga() {
   const [isImporting, setIsImporting] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [activeMenuId, setActiveMenuId] = useState(null);
 
   const [formData, setFormData] = useState({
     nama: "",
@@ -671,55 +672,78 @@ export default function DataWarga() {
             </div>
           ) : (
             sortedData.map((item) => (
-              <Card key={item.id} className="flex flex-col gap-4">
-                <div className="flex justify-between items-start">
+              <Card key={item.id} className="flex flex-col gap-4 !overflow-visible">
+                <div className="flex justify-between items-start relative">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">{item.nama}</span>
                     <span className="text-xs font-semibold text-indigo-600 mt-0.5">Blok {item.blok?.blok_no || "-"}</span>
                   </div>
-                  <Badge variant={item.status === 'aktif' ? 'green' : 'amber'}>
-                    {item.status || 'aktif'}
-                  </Badge>
+                  
+                  <div className="flex items-center gap-2">
+                    <Badge variant={item.status === 'aktif' ? 'green' : 'amber'}>
+                      {item.status || 'aktif'}
+                    </Badge>
+                    
+                    <div className="relative">
+                      <button 
+                        onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                        className="p-1 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all cursor-pointer"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      
+                      {activeMenuId === item.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setActiveMenuId(null)}
+                          />
+                          <div className="absolute right-0 mt-1 w-32 bg-white border border-slate-100 rounded-xl shadow-lg z-20 p-1 flex flex-col gap-0.5">
+                            <PermissionGuard module="warga" action="edit">
+                              <button 
+                                onClick={() => {
+                                  handleEdit(item);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+                              >
+                                <Edit className="w-3.5 h-3.5 text-slate-400" /> Edit
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  handleResetPassword(item);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50/50 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+                              >
+                                <UserCircle className="w-3.5 h-3.5 text-indigo-400" /> Password
+                              </button>
+                            </PermissionGuard>
+                            
+                            <PermissionGuard module="warga" action="delete">
+                              <div className="h-px bg-slate-100 my-0.5" />
+                              <button 
+                                onClick={() => {
+                                  handleDeleteWarga(item.id);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-red-400" /> Hapus
+                              </button>
+                            </PermissionGuard>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="space-y-1.5 text-xs text-slate-500 font-medium py-2 border-y border-slate-50">
+                <div className="space-y-1.5 text-xs text-slate-500 font-medium pt-2 border-t border-slate-50">
                   <p className="flex justify-between"><span>Email:</span> <span className="text-slate-900">{item.email || "-"}</span></p>
                   <p className="flex justify-between"><span>Telepon:</span> <span className="text-slate-900">{item.phone || "-"}</span></p>
                   <p className="flex justify-between"><span>Anggota Keluarga:</span> <span className="text-slate-900">{item.family_members || 0} orang</span></p>
                   <p className="flex justify-between"><span>Tgl Serah Terima:</span> <span className="text-slate-900">{item.tgl_serah_terima ? new Date(item.tgl_serah_terima).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : "-"}</span></p>
-                </div>
-                
-                <div className="flex gap-2">
-                  <PermissionGuard module="warga" action="edit">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 text-slate-700" 
-                      onClick={() => handleEdit(item)}
-                    >
-                      Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="px-3 text-slate-500" 
-                      onClick={() => handleResetPassword(item)}
-                      title="Reset Password"
-                    >
-                      <UserCircle className="w-4.5 h-4.5" />
-                    </Button>
-                  </PermissionGuard>
-                  
-                  <PermissionGuard module="warga" action="delete">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 text-red-600 hover:bg-red-50 border-red-200" 
-                      onClick={() => handleDeleteWarga(item.id)}
-                    >
-                      Hapus
-                    </Button>
-                  </PermissionGuard>
                 </div>
               </Card>
             ))
