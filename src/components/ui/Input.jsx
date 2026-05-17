@@ -30,7 +30,6 @@ export const Input = ({
             focus:outline-none focus:border-slate-900 focus:bg-white focus:ring-4 focus:ring-slate-900/5
             transition-all placeholder:text-slate-300
             ${Icon ? 'pl-11 pr-4' : 'px-4'}
-            ${props.type === 'date' ? 'pr-11' : ''}
             ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : ''}
             ${otherClasses}
           `}
