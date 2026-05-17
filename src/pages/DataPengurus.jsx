@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Edit, Trash2, Search, Shield, Calendar, UserCheck, Phone, Briefcase, Award, Users, UserCircle } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Shield, Calendar, UserCheck, Phone, Briefcase, Award, Users, UserCircle, MoreVertical } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal, Select } from "@/components/ui";
@@ -37,6 +37,7 @@ export default function DataPengurus() {
   const [isSubmitting, setSearchTerming] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [activeMenuId, setActiveMenuId] = useState(null);
   const [wargaList, setWargaList] = useState([]);
   
   const [formData, setFormData] = useState({
@@ -303,64 +304,87 @@ export default function DataPengurus() {
             </div>
           ) : (
             filteredData.map((item) => (
-              <Card key={item.id} className="flex flex-col gap-4">
+              <Card key={item.id} noPadding className="p-4 flex flex-col gap-2.5 border border-slate-100 shadow-none !overflow-visible">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">{item.warga?.nama}</span>
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Blok {item.warga?.blok || "-"}</span>
                   </div>
-                  <Badge variant="indigo">
-                    {item.role?.name || "Pengurus"}
-                  </Badge>
+                  
+                  <div className="flex items-center gap-1.5 relative">
+                    <Badge variant={item.is_owner ? "indigo" : "slate"} className={item.is_owner ? "bg-slate-900 text-white border-none" : ""}>
+                      {item.role?.name || item.jabatan}
+                    </Badge>
+                    
+                    <div className="relative">
+                      <button 
+                        onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all cursor-pointer border-none bg-transparent"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      
+                      {activeMenuId === item.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setActiveMenuId(null)}
+                          />
+                          <div className="absolute right-0 mt-1 w-36 bg-white border border-slate-100 rounded-xl shadow-lg z-20 p-1 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                            {item.warga?.no_hp && (
+                              <button 
+                                onClick={() => {
+                                  const phone = item.warga?.no_hp?.replace(/\D/g, '');
+                                  if (phone) window.open(`https://wa.me/${phone.startsWith('0') ? '62' + phone.slice(1) : phone}`, '_blank');
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-none bg-transparent"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24" className="w-3.5 h-3.5">
+                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.437 5.63 1.437h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                </svg> WhatsApp
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => {
+                                handleEdit(item);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-none bg-transparent"
+                            >
+                              <Edit className="w-3.5 h-3.5 text-slate-400" /> Edit
+                            </button>
+                            {profile?.pengurus?.is_owner && !item.is_owner && (
+                              <button 
+                                onClick={() => {
+                                  handleTransferOwnership(item);
+                                  setActiveMenuId(null);
+                                }}
+                                className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-amber-600 hover:bg-amber-50 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-none bg-transparent"
+                              >
+                                <Award className="w-3.5 h-3.5 text-amber-400" /> Transfer Owner
+                              </button>
+                            )}
+                            <div className="h-px bg-slate-100 my-0.5" />
+                            <button 
+                              onClick={() => {
+                                handleDelete(item.id);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-none bg-transparent"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-400" /> Hapus
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="space-y-1.5 text-xs text-slate-500 font-medium py-2 border-y border-slate-50">
-                  <p className="flex justify-between"><span>Email:</span> <span className="text-slate-900">{item.warga?.email || "-"}</span></p>
-                  <p className="flex justify-between"><span>Telepon:</span> <span className="text-slate-900">{item.warga?.phone || "-"}</span></p>
-                  <p className="flex justify-between"><span>Periode Jabatan:</span> <span className="text-slate-900">{item.periode_mulai && item.periode_selesai ? `${new Date(item.periode_mulai).getFullYear()} - ${new Date(item.periode_selesai).getFullYear()}` : "-"}</span></p>
-                </div>
-                
-                <div className="flex gap-2">
-                  {item.warga?.phone && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="px-3 text-emerald-600 border-emerald-100 hover:bg-emerald-50"
-                      onClick={() => window.open(`https://wa.me/${item.warga.phone.replace(/[^0-9]/g, '')}`, '_blank')}
-                      title="Hubungi WhatsApp"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.437 5.63 1.437h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                    </Button>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 text-slate-700" 
-                    onClick={() => handleEdit(item)}
-                  >
-                    Edit
-                  </Button>
-                  {profile?.pengurus?.is_owner && !item.is_owner && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="px-3 text-amber-600 border-amber-200 hover:bg-amber-50" 
-                      onClick={() => handleTransferOwnership(item)}
-                      title="Transfer Kepemilikan"
-                    >
-                      <Award className="w-4.5 h-4.5" />
-                    </Button>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1 text-red-600 hover:bg-red-50 border-red-200" 
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    Hapus
-                  </Button>
+                <div className="space-y-1 text-[11px] text-slate-500 font-medium py-1.5 border-t border-slate-50">
+                  <p className="flex justify-between"><span>No. Telepon:</span> <span className="text-slate-900 font-semibold">{item.warga?.no_hp || "-"}</span></p>
+                  <p className="flex justify-between"><span>Periode Jabatan:</span> <span className="text-slate-900 font-semibold">{item.periode || "-"}</span></p>
                 </div>
               </Card>
             ))
