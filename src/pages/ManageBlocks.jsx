@@ -301,7 +301,7 @@ export default function ManageBlocks() {
             </div>
           ) : (
             sortedData.map((item) => (
-              <Card key={item.id} noPadding className="p-3 flex flex-col gap-2 border border-slate-100 shadow-none !overflow-visible">
+              <Card key={item.id} noPadding className="p-4 flex flex-col gap-2.5 border border-slate-100 shadow-none !overflow-visible">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">Blok {item.blok_no}</span>
