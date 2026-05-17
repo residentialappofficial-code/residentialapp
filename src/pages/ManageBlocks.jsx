@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, Edit, Trash2, Plus, X, Building2, Map, ShieldCheck, UserCircle, Phone, Calendar, ArrowUpDown } from "lucide-react";
+import { Search, Edit, Trash2, Plus, X, Building2, Map, ShieldCheck, UserCircle, Phone, Calendar, ArrowUpDown, MoreVertical } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal, Select } from "@/components/ui";
@@ -71,6 +71,7 @@ export default function ManageBlocks() {
     });
   }, [data, sortConfig]);
   const [editingId, setEditingId] = useState(null);
+  const [activeMenuId, setActiveMenuId] = useState(null);
 
   const [formData, setFormData] = useState({
     blok_no: "",
@@ -207,7 +208,7 @@ export default function ManageBlocks() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               icon={Search}
-              className="w-80"
+              className="w-full md:w-80"
             />
           }
         />
@@ -299,34 +300,66 @@ export default function ManageBlocks() {
             </div>
           ) : (
             sortedData.map((item) => (
-              <Card key={item.id} className="p-4 flex flex-col gap-3 border border-slate-100 shadow-sm">
+              <Card key={item.id} className="!p-3 flex flex-col gap-2 border border-slate-100 shadow-none !overflow-visible">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">Blok {item.blok_no}</span>
                     <span className="text-[10px] font-medium text-slate-400 mt-0.5">Luas Tanah: {item.luas_tanah} m²</span>
                   </div>
-                  <Badge variant={
-                    item.status_hunian === 'Dihuni' ? 'blue' :
-                    item.status_hunian === 'Dikontrakkan' ? 'indigo' :
-                    item.status_hunian === 'Kosong Dikunjungi' ? 'amber' : 'slate'
-                  }>
-                    {item.status_hunian}
-                  </Badge>
+                  <div className="flex items-center gap-1 relative">
+                    <Badge variant={
+                      item.status_hunian === 'Dihuni' ? 'blue' :
+                      item.status_hunian === 'Dikontrakkan' ? 'indigo' :
+                      item.status_hunian === 'Kosong Dikunjungi' ? 'amber' : 'slate'
+                    }>
+                      {item.status_hunian}
+                    </Badge>
+                    
+                    <div className="relative">
+                      <button 
+                        onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all cursor-pointer border-none bg-transparent"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      
+                      {activeMenuId === item.id && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-10" 
+                            onClick={() => setActiveMenuId(null)}
+                          />
+                          <div className="absolute right-0 mt-1 w-28 bg-white border border-slate-100 rounded-xl shadow-lg z-20 p-1 flex flex-col gap-0.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <button 
+                              onClick={() => {
+                                handleEdit(item);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-none bg-transparent"
+                            >
+                              <Edit className="w-3.5 h-3.5 text-slate-400" /> Edit
+                            </button>
+                            <div className="h-px bg-slate-100 my-0.5" />
+                            <button 
+                              onClick={() => {
+                                handleDelete(item.id);
+                                setActiveMenuId(null);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 transition-colors cursor-pointer border-none bg-transparent"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-400" /> Hapus
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="space-y-1 text-xs text-slate-500 font-medium py-2 border-y border-slate-50">
+                <div className="space-y-1 text-[11px] text-slate-500 font-medium py-1.5 border-t border-slate-50">
                   <p className="flex justify-between"><span>Pemilik Aset:</span> <span className="text-slate-900 font-semibold">{item.nama_pemilik || "-"}</span></p>
                   <p className="flex justify-between"><span>Kontak Pemilik:</span> <span className="text-slate-900">{item.kontak_pemilik || "-"}</span></p>
                   <p className="flex justify-between"><span>Tgl Serah Terima:</span> <span className="text-slate-900">{item.tgl_serah_terima || "-"}</span></p>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(item)} className="flex-1 text-slate-700">
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleDelete(item.id)} className="flex-1 text-red-600 hover:bg-red-50 border-red-200">
-                    Hapus
-                  </Button>
                 </div>
               </Card>
             ))
