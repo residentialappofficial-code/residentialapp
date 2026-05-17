@@ -201,15 +201,15 @@ export default function DataPengurus() {
           title="Struktur Organisasi" 
           subtitle="Database pengurus aktif yang bertugas di lingkungan perumahan"
           action={
-            <div className="flex gap-4">
+            <div className="flex w-full sm:w-auto items-center gap-2">
               <Input 
                 placeholder="Cari nama atau jabatan..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 icon={Search}
-                className="w-96"
+                className="w-full sm:w-80 md:w-96"
               />
-              <Button variant="ghost" icon={Briefcase} size="sm" className="text-slate-400" />
+              <Button variant="ghost" icon={Briefcase} size="sm" className="text-slate-400 shrink-0" />
             </div>
           }
         />
@@ -303,7 +303,7 @@ export default function DataPengurus() {
             </div>
           ) : (
             filteredData.map((item) => (
-              <Card key={item.id} className="p-4 flex flex-col gap-4 border border-slate-100 shadow-sm">
+              <Card key={item.id} className="flex flex-col gap-4 !border-none shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] transition-all duration-300">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-slate-900 tracking-tight">{item.warga?.nama}</span>

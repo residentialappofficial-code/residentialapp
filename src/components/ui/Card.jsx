@@ -12,12 +12,12 @@ export const Card = ({ children, className = '', noPadding = false }) => {
 
 export const CardHeader = ({ title, subtitle, action, className = '' }) => {
   return (
-    <div className={`px-4 py-3 border-b border-slate-50 flex justify-between items-center ${className}`}>
-      <div>
+    <div className={`px-4 py-3 border-b border-slate-50 flex flex-col sm:flex-row sm:justify-between sm:items-start md:items-center gap-4 ${className}`}>
+      <div className="flex-1">
         <h3 className="text-base font-bold text-slate-900 tracking-tight leading-none">{title}</h3>
-        {subtitle && <p className="text-xs text-slate-400 mt-1 font-medium">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-slate-400 mt-1 font-medium leading-normal">{subtitle}</p>}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="w-full sm:w-auto shrink-0">{action}</div>}
     </div>
   );
 };
