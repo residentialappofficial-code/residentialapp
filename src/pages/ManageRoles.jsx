@@ -151,20 +151,27 @@ export default function ManageRoles() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 md:gap-8">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Manajemen Hak Akses</h1>
           <p className="text-slate-500 text-sm mt-1">Buat peran pengurus dan tentukan izin akses per modul.</p>
         </div>
-        <Button variant="primary" icon={Plus} onClick={() => {
-          setEditingId(null);
-          setFormData({ name: "", permissions: {} });
-          setIsModalOpen(true);
-        }}>Tambah Peran</Button>
+        <Button 
+          variant="primary" 
+          icon={Plus} 
+          onClick={() => {
+            setEditingId(null);
+            setFormData({ name: "", permissions: {} });
+            setIsModalOpen(true);
+          }}
+          className="hidden md:flex"
+        >
+          Tambah Peran
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {roles.map((role) => (
           <Card key={role.id} className="relative group">
             <div className="flex flex-col gap-4">
@@ -269,6 +276,19 @@ export default function ManageRoles() {
           </div>
         </form>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={() => {
+          setEditingId(null);
+          setFormData({ name: "", permissions: {} });
+          setIsModalOpen(true);
+        }}
+        className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+        title="Tambah Peran"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }

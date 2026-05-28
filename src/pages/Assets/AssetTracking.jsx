@@ -193,14 +193,14 @@ export default function AssetTracking() {
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 md:gap-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Ketersediaan Aset</h1>
           <p className="text-slate-500 text-sm mt-1">Pantau status dan pelacakan peminjaman alat warga.</p>
         </div>
         {isAdmin && (
-          <div className="flex gap-3">
+          <div className="hidden md:flex gap-3">
             <Button
               variant="outline"
               icon={Plus}
@@ -393,6 +393,17 @@ export default function AssetTracking() {
           </div>
         </form>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      {isAdmin && (
+        <button 
+          onClick={() => setIsLoanModalOpen(true)}
+          className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+          title="Catat Pinjam"
+        >
+          <Hammer className="w-6 h-6" />
+        </button>
+      )}
     </div>
   );
 }

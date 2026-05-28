@@ -23,7 +23,7 @@ const BlockStatCard = ({ title, value, icon: Icon, color = "slate" }) => {
   };
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-100 flex flex-col justify-between hover:shadow-sm transition-all duration-300">
+    <div className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col justify-between hover:shadow-sm transition-all duration-300">
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium uppercase tracking-wider">
           {title}
@@ -33,7 +33,7 @@ const BlockStatCard = ({ title, value, icon: Icon, color = "slate" }) => {
         </div>
       </div>
       <div>
-        <h3 className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{value}</h3>
+        <h3 className="text-base font-bold text-slate-900 tracking-tight leading-none">{value}</h3>
       </div>
     </div>
   );

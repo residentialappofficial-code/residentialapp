@@ -3,6 +3,7 @@ import { Package, Calendar, Info, CheckCircle2, Clock, AlertCircle, ChevronRight
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Card, CardHeader, Badge, Modal, Input, Table, THead, TBody, TR, TH, TD } from "@/components/ui";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function AssetBorrow() {
   const { profile } = useAuth();
@@ -204,6 +205,16 @@ export default function AssetBorrow() {
                   <div className="flex items-center gap-2 p-3 bg-indigo-50 rounded-xl text-[10px] font-bold text-indigo-600 uppercase tracking-wider">
                     <Clock size={12} />
                     Menunggu Verifikasi Admin
+                  </div>
+                )}
+                {(req.status === 'Approved' || req.status === 'Borrowed') && (
+                  <div className="flex flex-col items-center gap-3 p-4 bg-orange-50 rounded-xl mt-2 border border-orange-100">
+                    <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wider text-center flex items-center gap-1">
+                      <Info size={12} /> Tunjukkan QR Code ini saat pengambilan
+                    </p>
+                    <div className="bg-white p-2 rounded-lg shadow-sm">
+                      <QRCodeSVG value={`ASSET-${req.id}`} size={90} />
+                    </div>
                   </div>
                 )}
                 {req.status === 'Returned' && (

@@ -48,6 +48,19 @@ describe('ResidentFees Calculation Logic', () => {
     expect(result.totalObligation).toBe(200000);
   });
 
+  it('falls back to blok_info.tgl_serah_terima if warga.tgl_serah_terima is missing', () => {
+    const warga = { 
+        id: 'w5', 
+        blok_info: { tgl_serah_terima: '2026-03-01' },
+        created_at: '2026-04-01' 
+    };
+    const result = calculateFinance(warga, mockConfig, [], now);
+    
+    // Mar, Apr, May = 3 months
+    expect(result.totalMonths).toBe(3);
+    expect(result.totalObligation).toBe(300000);
+  });
+
   it('calculates "Lebih" correctly when user overpays', () => {
     const warga = { id: 'w4', tgl_serah_terima: '2026-05-01' };
     const bills = [

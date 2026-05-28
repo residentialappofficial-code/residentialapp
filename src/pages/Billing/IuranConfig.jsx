@@ -15,9 +15,7 @@ export default function IuranConfig() {
     rekening_bank: "", 
     rekening_nama: "", 
     qris_url: "",
-    use_unique_code: true,
-    pakasir_slug: "",
-    pakasir_api_key: ""
+    use_unique_code: true
   });
 
   useEffect(() => {
@@ -38,9 +36,7 @@ export default function IuranConfig() {
             rekening_bank: data.rekening_bank || "", 
             rekening_nama: data.rekening_nama || "", 
             qris_url: data.qris_url || "",
-            use_unique_code: data.use_unique_code ?? true,
-            pakasir_slug: data.pakasir_slug || "",
-            pakasir_api_key: data.pakasir_api_key || ""
+            use_unique_code: data.use_unique_code ?? true
           });
         }
       } catch (err) {
@@ -65,9 +61,7 @@ export default function IuranConfig() {
           rekening_bank: config.rekening_bank, 
           rekening_nama: config.rekening_nama, 
           qris_url: config.qris_url,
-          use_unique_code: config.use_unique_code,
-          pakasir_slug: config.pakasir_slug,
-          pakasir_api_key: config.pakasir_api_key
+          use_unique_code: config.use_unique_code
         }, { onConflict: 'perumahan_id' });
 
       if (error) throw error;
@@ -87,7 +81,7 @@ export default function IuranConfig() {
   );
 
   return (
-    <div className="max-w-full mx-auto flex flex-col gap-8">
+    <div className="max-w-full mx-auto flex flex-col gap-4 md:gap-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -248,55 +242,7 @@ export default function IuranConfig() {
             </div>
           </Card>
 
-          <Card noPadding>
-            <CardHeader 
-              title="Integrasi Pakasir (Otomatis)" 
-              subtitle="Hubungkan ke Pakasir untuk pembayaran QRIS otomatis"
-            />
-            <div className="p-6 flex flex-col gap-6">
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col md:flex-row gap-5 items-start md:items-center relative overflow-hidden group">
-                <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm relative z-10">
-                  <Zap className="w-6 h-6 text-indigo-600" />
-                </div>
-                <div className="space-y-1 relative z-10">
-                  <h4 className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Automated Payment Protocol</h4>
-                  <p className="text-sm text-slate-600 font-semibold leading-relaxed tracking-tight">
-                    Gunakan integrasi ini untuk mengaktifkan pembayaran otomatis via QRIS. Status tagihan akan terverifikasi secara instan saat warga membayar.
-                  </p>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input 
-                  label="Slug Proyek Pakasir"
-                  value={config.pakasir_slug}
-                  onChange={(e) => setConfig({...config, pakasir_slug: e.target.value})}
-                  placeholder="Contoh: perumahancendana"
-                />
-                <Input 
-                  label="Pakasir API Key"
-                  type="password"
-                  value={config.pakasir_api_key}
-                  onChange={(e) => setConfig({...config, pakasir_api_key: e.target.value})}
-                  placeholder="PAKASIR_API_..."
-                />
-              </div>
-              
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Webhook URL</p>
-                <div className="flex items-center gap-3">
-                  <code className="text-xs font-mono bg-white px-4 py-2.5 rounded-lg border border-slate-200 flex-1 text-slate-600">
-                    {window.location.origin}/api/webhooks/pakasir
-                  </code>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/pakasir`);
-                    alert("Webhook URL dicopy!");
-                  }} className="text-indigo-600 font-black">Copy</Button>
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 mt-3 italic">* Masukkan URL ini di pengaturan proyek Pakasir Anda.</p>
-              </div>
-            </div>
-          </Card>
         </div>
 
         {/* Right: Simulation & Insights */}

@@ -30,6 +30,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [recentPayments, setRecentPayments] = useState([]);
+  const [chartData, setChartData] = useState({ data: [], labels: [], max: 1 });
+  const [topTunggakan, setTopTunggakan] = useState([]);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -42,16 +44,13 @@ export default function Dashboard() {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
 
-        const [wargaRes, tagihanRes, kasRes, recentRes, tunggakanRes] = await Promise.all([
+        const [wargaRes, tagihanRes, recentRes, rpcRes] = await Promise.all([
           supabase.from("warga").select("id", { count: "exact" }).eq("perumahan_id", selectedPerumahanId).eq("status_aktif", true),
           supabase.from("tagihan")
             .select("jumlah, status")
             .eq("perumahan_id", selectedPerumahanId)
             .eq("bulan", currentMonth)
             .eq("tahun", currentYear),
-          supabase.from("arus_kas")
-            .select("jumlah, kategori")
-            .eq("perumahan_id", selectedPerumahanId),
           supabase.from("tagihan")
             .select(`
               id, jumlah, created_at,
@@ -61,10 +60,7 @@ export default function Dashboard() {
             .eq("status", "Paid")
             .order("created_at", { ascending: false })
             .limit(5),
-          supabase.from("tagihan")
-            .select("jumlah")
-            .eq("perumahan_id", selectedPerumahanId)
-            .eq("status", "Unpaid")
+          supabase.rpc('get_dashboard_stats', { p_perumahan_id: selectedPerumahanId })
         ]);
 
         const iuranBulanIni = tagihanRes.data
@@ -75,18 +71,41 @@ export default function Dashboard() {
         const sudahBayar = tagihanRes.data?.filter(d => d.status === 'Paid').length || 0;
         const ratePembayaran = totalWarga > 0 ? (sudahBayar / totalWarga) * 100 : 0;
 
-        const pemasukan = kasRes.data?.filter(d => d.kategori === 'Pemasukan').reduce((acc, curr) => acc + parseInt(curr.jumlah), 0) || 0;
-        const pengeluaran = kasRes.data?.filter(d => d.kategori === 'Pengeluaran').reduce((acc, curr) => acc + parseInt(curr.jumlah), 0) || 0;
+        const rpcData = rpcRes.data || {};
         
-        const totalTunggakan = tunggakanRes.data?.reduce((acc, curr) => acc + (parseInt(curr.jumlah) || 0), 0) || 0;
+        // Chart Data processing from RPC
+        const labels = [];
+        const cData = [];
+        const d = new Date();
+        d.setDate(1); 
+        for (let i = 5; i >= 0; i--) {
+          const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
+          labels.push(m.toLocaleString('id-ID', { month: 'short' }));
+          
+          // Find matching data from RPC
+          const monthData = rpcData.kas_bulanan?.find(k => k.month === m.getMonth() && k.year === m.getFullYear());
+          
+          cData.push({ 
+            month: m.getMonth(), 
+            year: m.getFullYear(), 
+            pemasukan: monthData ? parseInt(monthData.pemasukan) || 0 : 0, 
+            pengeluaran: monthData ? parseInt(monthData.pengeluaran) || 0 : 0 
+          });
+        }
+
+        const maxVal = Math.max(...cData.map(c => Math.max(c.pemasukan, c.pengeluaran)), 1);
+        setChartData({ data: cData, labels, max: maxVal });
+
+        // Tunggakan Processing from RPC
+        setTopTunggakan(rpcData.top_tunggakan || []);
 
         setStats({
           totalWarga,
           iuranBulanIni,
           ratePembayaran,
-          saldoKas: pemasukan - pengeluaran,
-          totalPengeluaran: pengeluaran,
-          totalTunggakan
+          saldoKas: parseInt(rpcData.saldo_kas) || 0,
+          totalPengeluaran: parseInt(rpcData.pengeluaran) || 0,
+          totalTunggakan: parseInt(rpcData.total_tunggakan) || 0
         });
         setRecentPayments(recentRes.data || []);
       } catch (err) {
@@ -191,23 +210,24 @@ export default function Dashboard() {
                 ))}
               </div>
               <div className="relative h-full flex items-end justify-between px-2 pt-10 pb-4 gap-2">
-                {[45, 65, 35, 85, 50, 95, 60, 40, 75, 55, 80, 70].map((h, i) => (
-                  <div key={i} className="flex-1 flex flex-col justify-end gap-1 group">
-                    <div className="w-full bg-emerald-500/80 hover:bg-emerald-400 transition-all rounded-sm" style={{ height: `${h}%` }}></div>
-                    <div className="w-full bg-red-400/80 hover:bg-red-300 transition-all rounded-sm" style={{ height: `${20}%` }}></div>
-                  </div>
-                ))}
+                {chartData.data.map((c, i) => {
+                  const pHeight = Math.max((c.pemasukan / chartData.max) * 100, 2); // min 2% height for visibility
+                  const mHeight = Math.max((c.pengeluaran / chartData.max) * 100, 2);
+                  return (
+                    <div key={i} className="flex-1 flex flex-col justify-end gap-1 group relative">
+                      <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap z-10 transition-opacity">
+                        + Rp {c.pemasukan.toLocaleString()} <br/> - Rp {c.pengeluaran.toLocaleString()}
+                      </div>
+                      <div className="w-full bg-emerald-500/80 hover:bg-emerald-400 transition-all rounded-sm" style={{ height: `${pHeight}%` }}></div>
+                      <div className="w-full bg-red-400/80 hover:bg-red-300 transition-all rounded-sm" style={{ height: `${mHeight}%` }}></div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             
             <div className="flex justify-between mt-4 pt-4 border-t border-slate-50 text-[10px] font-medium text-slate-400">
-               <span>12:00</span>
-               <span>18:00</span>
-               <span>28</span>
-               <span>06:00</span>
-               <span>12:00</span>
-               <span>18:00</span>
-               <span>29</span>
+               {chartData.labels.map((l, i) => <span key={i}>{l}</span>)}
             </div>
           </Card>
         </div>
@@ -219,10 +239,14 @@ export default function Dashboard() {
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
                 <AlertCircle className="w-3.5 h-3.5 text-indigo-500" /> Analitik Keuangan
               </div>
-              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded">Aman</span>
+              <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${stats?.saldoKas >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                {stats?.saldoKas >= 0 ? 'Aman' : 'Perhatian'}
+              </span>
             </div>
             <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              Sistem mendeteksi stabilitas arus kas yang positif dengan probabilitas pertumbuhan kas mencapai 78% bulan ini.
+              {stats?.saldoKas >= 0 
+                ? "Sistem mendeteksi stabilitas arus kas yang positif. Likuiditas perumahan dalam keadaan aman untuk operasional bulanan."
+                : "Peringatan: Arus kas terdeteksi negatif. Pengeluaran melebihi pemasukan, mohon segera evaluasi keuangan perumahan."}
             </p>
             <div className="flex justify-between items-center text-xs font-medium pb-2 border-b border-slate-50 mb-2">
               <span className="text-slate-500">Total Pengeluaran</span>
@@ -243,20 +267,22 @@ export default function Dashboard() {
               <span className="text-xs text-indigo-600 font-medium cursor-pointer">View All</span>
             </div>
             <div className="space-y-4">
-              {[1,2,3].map((item) => (
-                <div key={item} className="flex justify-between items-center">
+              {topTunggakan.length === 0 ? (
+                <p className="text-xs text-slate-400 py-4 text-center">Tidak ada tunggakan</p>
+              ) : topTunggakan.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
-                      <Users className="w-3 h-3 text-slate-600" />
+                    <div className="w-6 h-6 rounded-full bg-red-50 flex items-center justify-center">
+                      <Users className="w-3 h-3 text-red-600" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-900">Blok A-{item}</p>
-                      <p className="text-[10px] text-slate-500">Risk 82%</p>
+                      <p className="text-xs font-bold text-slate-900">{item.nama || "Unknown"}</p>
+                      <p className="text-[10px] text-slate-500">{item.blok || "No Blok"}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-slate-900">Rp 150.000</p>
-                    <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1 rounded">-2.13%</span>
+                    <p className="text-xs font-bold text-slate-900">Rp {item.total.toLocaleString()}</p>
+                    <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1 rounded">Unpaid</span>
                   </div>
                 </div>
               ))}

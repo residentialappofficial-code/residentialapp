@@ -13,7 +13,7 @@ const StaffStatCard = ({ title, value, type = "neutral" }) => {
   };
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-100 flex flex-col justify-between hover:shadow-sm transition-all duration-300">
+    <div className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col justify-between hover:shadow-sm transition-all duration-300">
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium uppercase tracking-wider">
           {title}
@@ -22,7 +22,7 @@ const StaffStatCard = ({ title, value, type = "neutral" }) => {
         </div>
       </div>
       <div>
-        <h3 className="text-2xl font-bold text-slate-900 tracking-tight leading-none">{value}</h3>
+        <h3 className="text-base font-bold text-slate-900 tracking-tight leading-none">{value}</h3>
       </div>
     </div>
   );
@@ -182,12 +182,20 @@ export default function DataPengurus() {
           <p className="text-slate-500 text-sm mt-1">Kelola struktur kepengurusan dan penugasan warga.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="primary" size="md" icon={Plus} onClick={() => {
-            setIsEditMode(false);
-            setEditingId(null);
-            setFormData({ warga_id: "", jabatan: "Ketua RT", periode: "2025-2027" });
-            setIsModalOpen(true);
-          }}>Tambah Pengurus</Button>
+          <Button 
+            variant="primary" 
+            size="md" 
+            icon={Plus} 
+            onClick={() => {
+              setIsEditMode(false);
+              setEditingId(null);
+              setFormData({ warga_id: "", jabatan: "Ketua RT", periode: "2025-2027" });
+              setIsModalOpen(true);
+            }}
+            className="hidden md:flex"
+          >
+            Tambah Pengurus
+          </Button>
         </div>
       </div>
 
@@ -457,6 +465,20 @@ export default function DataPengurus() {
           </div>
         </div>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={() => {
+          setIsEditMode(false);
+          setEditingId(null);
+          setFormData({ warga_id: "", jabatan: "Ketua RT", periode: "2025-2027" });
+          setIsModalOpen(true);
+        }}
+        className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+        title="Tambah Pengurus"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }

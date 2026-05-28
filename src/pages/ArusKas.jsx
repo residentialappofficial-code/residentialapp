@@ -144,7 +144,7 @@ export default function ArusKas() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 md:gap-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Arus Kas & Keuangan</h1>
@@ -153,17 +153,25 @@ export default function ArusKas() {
         {profile?.role !== 'warga' && (
           <div className="flex items-center gap-3">
             <Button variant="ghost" icon={FileText} onClick={handleExportCSV} className="text-slate-500 font-semibold hover:bg-slate-50">Ekspor Laporan</Button>
-            <Button variant="primary" size="md" icon={Plus} onClick={() => {
-              setIsEditMode(false);
-              setEditingId(null);
-              setFormData({ tanggal: new Date().toISOString().split('T')[0], keterangan: "", kategori: "Pemasukan", jumlah: 0 });
-              setIsModalOpen(true);
-            }}>Input Transaksi</Button>
+            <Button 
+              variant="primary" 
+              size="md" 
+              icon={Plus} 
+              onClick={() => {
+                setIsEditMode(false);
+                setEditingId(null);
+                setFormData({ tanggal: new Date().toISOString().split('T')[0], keterangan: "", kategori: "Pemasukan", jumlah: 0 });
+                setIsModalOpen(true);
+              }}
+              className="hidden md:flex"
+            >
+              Input Transaksi
+            </Button>
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
         <StatCard title="Total Pemasukan" value={`Rp ${summary.masuk.toLocaleString()}`} icon={ArrowUpRight} isPositive={true} change="Uang Masuk" />
         <StatCard title="Total Pengeluaran" value={`Rp ${summary.keluar.toLocaleString()}`} icon={ArrowDownRight} isPositive={false} change="Uang Keluar" />
         <StatCard title="Saldo Kas Saat Ini" value={`Rp ${summary.saldo.toLocaleString()}`} icon={WalletCards} isPositive={summary.saldo >= 0} change="Saldo Efektif" />
@@ -343,6 +351,22 @@ export default function ArusKas() {
           </div>
         </div>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      {profile?.role !== 'warga' && (
+        <button 
+          onClick={() => {
+            setIsEditMode(false);
+            setEditingId(null);
+            setFormData({ tanggal: new Date().toISOString().split('T')[0], keterangan: "", kategori: "Pemasukan", jumlah: 0 });
+            setIsModalOpen(true);
+          }}
+          className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+          title="Input Transaksi"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
     </div>
   );
 }

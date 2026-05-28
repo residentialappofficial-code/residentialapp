@@ -136,23 +136,56 @@ export default function ManageBills() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (data.length === 0) return;
+    const headers = ["Warga", "Blok", "Bulan", "Tahun", "Jumlah", "Status"];
+    const rows = data.map(item => [
+      `"${item.warga?.nama || ''}"`,
+      `"${item.warga?.blok || ''}"`,
+      item.bulan,
+      item.tahun,
+      item.jumlah,
+      item.status
+    ]);
+    
+    const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `laporan_tagihan_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 md:gap-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Manajemen Tagihan</h1>
           <p className="text-slate-500 text-sm mt-1">Distribusi dan audit invoice bulanan untuk seluruh unit warga.</p>
         </div>
-        <Button
-          onClick={handleGenerateBills}
-          isLoading={generating}
-          variant="primary"
-          icon={Sparkles}
-          size="md"
-        >
-          {generating ? "Memproses..." : `Generate ${currentMonth}/${currentYear}`}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportCSV}
+            variant="outline"
+            icon={FileText}
+            size="md"
+          >
+            Ekspor Laporan
+          </Button>
+          <Button
+            onClick={handleGenerateBills}
+            isLoading={generating}
+            variant="primary"
+            icon={Sparkles}
+            size="md"
+          >
+            {generating ? "Memproses..." : `Generate ${currentMonth}/${currentYear}`}
+          </Button>
+        </div>
       </div>
 
       <Card noPadding>

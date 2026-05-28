@@ -31,6 +31,8 @@ const ResidentFees = lazy(() => import('@/pages/Billing/ResidentFees'));
 const ManageBlocks = lazy(() => import('@/pages/ManageBlocks'));
 const ManageRoles = lazy(() => import('@/pages/ManageRoles'));
 const Changelog = lazy(() => import('@/pages/Changelog'));
+const SystemSettings = lazy(() => import('@/pages/SuperAdmin/SystemSettings'));
+const AuditLogs = lazy(() => import('@/pages/SuperAdmin/AuditLogs'));
 
 // Guard: redirect ke /login kalau belum login & cek role
 function PrivateRoute({ children, allowedRoles = [] }) {
@@ -153,6 +155,8 @@ function App() {
           <Route path="/borrow-assets" element={<PrivateRoute allowedRoles={['warga', 'admin', 'super_admin']}><AppLayout><AssetBorrow /></AppLayout></PrivateRoute>} />
           <Route path="/roles" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><ManageRoles /></AppLayout></PrivateRoute>} />
           <Route path="/changelog" element={<PrivateRoute><AppLayout><Changelog /></AppLayout></PrivateRoute>} />
+          <Route path="/system-settings" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><SystemSettings /></AppLayout></PrivateRoute>} />
+          <Route path="/audit-logs" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><AuditLogs /></AppLayout></PrivateRoute>} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

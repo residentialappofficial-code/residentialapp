@@ -148,7 +148,7 @@ export default function Complaints() {
   };
 
   return (
-    <div className="flex flex-col gap-8 max-w-full mx-auto">
+    <div className="flex flex-col gap-4 md:gap-8 max-w-full mx-auto">
       <div className="flex justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Laporan & Keluhan</h1>
@@ -160,6 +160,7 @@ export default function Complaints() {
             variant="primary"
             size="md"
             icon={Plus}
+            className="hidden md:flex"
           >
             Kirim Keluhan
           </Button>
@@ -346,6 +347,17 @@ export default function Complaints() {
           </div>
         </form>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      {!isGlobalAdmin && (
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+          title="Kirim Keluhan"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
     </div>
   );
 }

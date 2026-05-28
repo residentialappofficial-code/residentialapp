@@ -19,7 +19,9 @@ import {
   Grid3X3,
   History,
   ArrowRight,
-  X
+  X,
+  Server,
+  Activity
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,6 +56,8 @@ export function AppSidebar({ isOpen, onClose }) {
         { icon: ShieldCheck, label: "Iuran Warga (Dashboard)", to: "/community-billing", module: "iuran" },
         { icon: Building2, label: "Profil Komplek", to: "/my-complex", roles: ["admin"], module: "profile_complex" },
         { icon: Building2, label: "Infrastruktur Global", to: "/manage-complexes", roles: ["super_admin"] },
+        { icon: Server, label: "Sistem & Integrasi", to: "/system-settings", roles: ["super_admin"] },
+        { icon: Activity, label: "Audit Trail", to: "/audit-logs", roles: ["super_admin"] },
         { icon: Grid3X3, label: "Manajemen Blok", to: "/blok", roles: ["admin", "super_admin"], module: "blok" },
         { icon: Users, label: "Data Warga", to: "/warga", roles: ["admin", "super_admin"], module: "warga" },
         { icon: ShieldCheck, label: "Verifikasi Pembayaran", to: "/verify-payments", roles: ["admin", "super_admin"], module: "iuran" },

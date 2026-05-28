@@ -15,7 +15,7 @@ export const StatCard = ({
 }) => {
   return (
     <Card noPadding className="flex flex-col h-full">
-      <div className="p-5 flex flex-col h-full justify-between">
+      <div className="p-4 flex flex-col h-full justify-between">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-1.5 text-slate-500 text-[10px] font-bold uppercase tracking-widest">
             {title} <AlertCircle className="w-3 h-3 text-slate-200" />
@@ -38,7 +38,7 @@ export const StatCard = ({
               </>
             ) : (
               <>
-                <h3 className="text-2xl font-bold text-slate-900 tracking-tight leading-none mb-2">{value}</h3>
+                <h3 className="text-base font-bold text-slate-900 tracking-tight leading-none mb-2">{value}</h3>
                 {change && (
                   <p className={`text-[11px] font-bold ${isPositive ? 'text-emerald-500' : 'text-rose-500'}`}>
                     {change}

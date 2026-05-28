@@ -108,6 +108,7 @@ export default function ManageAnnouncements() {
             variant="primary"
             size="md"
             icon={Plus}
+            className="hidden md:flex"
           >
             Buat Pengumuman
           </Button>
@@ -223,6 +224,22 @@ export default function ManageAnnouncements() {
           </div>
         </form>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      {isAdmin && (
+        <button 
+          onClick={() => {
+            setIsEditMode(false);
+            setEditingId(null);
+            setFormData({ judul: "", konten: "", kategori: "Umum" });
+            setIsModalOpen(true);
+          }}
+          className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+          title="Buat Pengumuman"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
     </div>
   );
 }

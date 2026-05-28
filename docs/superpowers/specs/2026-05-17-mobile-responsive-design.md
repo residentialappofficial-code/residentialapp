@@ -93,6 +93,14 @@ Untuk memastikan konsistensi dan kegunaan tingkat tinggi pada seluruh formulir m
 - **Jarak Antar Konten Dinamis**: Jarak vertikal antar elemen, section utama, stat cards, maupun card daftar tabel pada layar seluler dibatasi tepat **16px** (`gap-4` atau `space-y-4`). Ini mencegah pemborosan ruang layar seluler (*scrolling fatigue*).
 - **Transisi Responsif**: Manfaatkan utility responsif Tailwind seperti `space-y-4 md:space-y-8` atau `gap-4 md:gap-8` agar kepadatan tinggi di mobile (16px) tetap berpadu serasi dengan tata letak lapang (32px) di desktop.
 
+### E. Floating Action Button (FAB) Mobile untuk Aksi Tambah/Buat
+- **Penyembunyian Tombol Desktop**: Seluruh tombol aksi utama bertipe "Tambah", "Buat", atau "Kirim Baru" yang terletak di header wajib disembunyikan pada layar seluler menggunakan kelas `hidden md:flex`.
+- **Floating Action Button (FAB) Bulat**: Sebagai gantinya, wajib ditambahkan komponen tombol bulat melayang (FAB) di pojok kanan bawah layar untuk seluler:
+  - **Posisi & Z-Index**: `fixed bottom-6 right-6 z-40`
+  - **Dimensi & Bentuk**: Lebar/tinggi tepat `w-14 h-14` dan bulat penuh (`rounded-full`)
+  - **Konten**: Hanya berupa ikon aksi tunggal berukuran `w-6 h-6` (contoh: `Plus` atau `Hammer`), tanpa teks label apapun.
+  - **Estetika Warna & Bayangan**: Menggunakan warna Indigo premium (`bg-indigo-600 hover:bg-indigo-700 text-white`) dengan bayangan melayang yang lembut (`shadow-lg shadow-indigo-300`).
+
 ---
 
 ## Success Criteria

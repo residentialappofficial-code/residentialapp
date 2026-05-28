@@ -5,9 +5,22 @@ import { Card, Badge, Button } from "@/components/ui";
 export default function Changelog() {
   const versions = [
     {
+      version: "3.1.0",
+      date: "29 Mei 2026",
+      status: "Latest",
+      changes: [
+        { type: "added", text: "Integrasi Webhook Pakasir untuk pembaruan status Lunas otomatis (real-time)." },
+        { type: "added", text: "Sistem Otomatisasi (Cron Job) penerbitan tagihan & notifikasi Email via Resend." },
+        { type: "added", text: "Fitur Ekspor Laporan Finansial (CSV) pada Arus Kas dan Tagihan." },
+        { type: "added", text: "Audit Trail Enterprise untuk pencatatan log aktivitas Superadmin." },
+        { type: "added", text: "Implementasi tiket QR Code untuk modul Peminjaman Aset." },
+        { type: "improved", text: "Optimasi Ekstrim Performa Dashboard menggunakan Supabase Native RPC (mengatasi bug limit 1000 data)." }
+      ]
+    },
+    {
       version: "3.0.3",
       date: "16 Mei 2026",
-      status: "Latest",
+      status: "Stable",
       changes: [
         { type: "added", text: "Redesain premium untuk halaman Login, Register, dan Lupa Kata Sandi." },
         { type: "added", text: "Integrasi animasi slide-up-fade-in pada elemen autentikasi." },

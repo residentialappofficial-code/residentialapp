@@ -15,8 +15,8 @@ const PayrollStatCard = ({ title, value, icon: Icon, type = "neutral" }) => {
   };
 
   return (
-    <Card className="relative overflow-hidden group">
-      <div className="flex flex-col gap-6">
+    <Card noPadding className="relative overflow-hidden group">
+      <div className="p-4 flex flex-col gap-4">
         <div className="flex justify-between items-start">
           <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-500 ${styles[type]}`}>
             <Icon className="w-5 h-5" />
@@ -24,7 +24,7 @@ const PayrollStatCard = ({ title, value, icon: Icon, type = "neutral" }) => {
         </div>
         
         <div className="space-y-1">
-          <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{value}</h3>
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">{value}</h3>
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{title}</p>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function Penggajian() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4 md:gap-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -180,17 +180,25 @@ export default function Penggajian() {
         </div>
         <div className="flex items-center gap-3">
           <Button variant="ghost" icon={History} className="text-slate-500 font-semibold hover:bg-slate-50">Riwayat Ledger</Button>
-          <Button variant="primary" size="md" icon={Plus} onClick={() => {
-            setIsEditMode(false);
-            setEditingId(null);
-            setFormData({ nama_staf: "", jabatan: "Keamanan", bulan: new Date().getMonth() + 1, tahun: new Date().getFullYear(), jumlah: 0, status: "Lunas" });
-            setIsModalOpen(true);
-          }}>Buat Slip Gaji</Button>
+          <Button 
+            variant="primary" 
+            size="md" 
+            icon={Plus} 
+            onClick={() => {
+              setIsEditMode(false);
+              setEditingId(null);
+              setFormData({ nama_staf: "", jabatan: "Keamanan", bulan: new Date().getMonth() + 1, tahun: new Date().getFullYear(), jumlah: 0, status: "Lunas" });
+              setIsModalOpen(true);
+            }}
+            className="hidden md:flex"
+          >
+            Buat Slip Gaji
+          </Button>
         </div>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-10">
         <PayrollStatCard title="Tenaga Kerja Aktif" value={stats.totalActive} icon={Briefcase} type="blue" />
         <PayrollStatCard title="Total Pengeluaran Gaji" value={`Rp ${(stats.totalPayroll / 1000000).toFixed(1)}M`} icon={Banknote} type="success" />
         <PayrollStatCard title="Status Pencairan" value="Tervalidasi" icon={CreditCard} type="purple" />
@@ -383,6 +391,20 @@ export default function Penggajian() {
           </div>
         </form>
       </Modal>
+
+      {/* Mobile Floating Action Button (FAB) */}
+      <button 
+        onClick={() => {
+          setIsEditMode(false);
+          setEditingId(null);
+          setFormData({ nama_staf: "", jabatan: "Keamanan", bulan: new Date().getMonth() + 1, tahun: new Date().getFullYear(), jumlah: 0, status: "Lunas" });
+          setIsModalOpen(true);
+        }}
+        className="fixed bottom-6 right-6 md:hidden z-40 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-indigo-300 active:scale-95 transition-all cursor-pointer border-none"
+        title="Buat Slip Gaji"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }
