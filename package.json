@@ -1,7 +1,7 @@
 {
   "name": "residentialapp",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.3.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -47,6 +47,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "jsdom": "^26.0.0",
+    "standard-version": "^9.5.0",
     "vite": "^7.2.4",
     "vitest": "^3.0.0",
     "wrangler": "^4.90.0"
