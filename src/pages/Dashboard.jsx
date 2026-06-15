@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { 
   Users, 
   ArrowUpRight,
@@ -10,11 +11,14 @@ import {
   Layers,
   Wallet,
   MoreHorizontal,
-  ChevronRight
+  ChevronRight,
+  Building2,
+  Receipt,
+  RefreshCw
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button, Card, CardHeader, StatCard } from "@/components/ui";
+import { Button, Card, CardHeader, StatCard, Table, THead, TBody, TR, TH, TD, Badge } from "@/components/ui";
 import { SelectionRequired } from "@/components/ui/SelectionRequired";
 import DashboardWarga from "@/pages/warga/Dashboard";
 
@@ -33,92 +37,254 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState({ data: [], labels: [], max: 1 });
   const [topTunggakan, setTopTunggakan] = useState([]);
 
-  useEffect(() => {
-    async function fetchDashboardData() {
-      if (!selectedPerumahanId) {
-        setLoading(false);
-        return;
-      }
+  // Super Admin Stats States
+  const [superStats, setSuperStats] = useState(null);
+  const [superComplexes, setSuperComplexes] = useState([]);
+
+  const fetchSuperAdminData = useCallback(async () => {
+    try {
       setLoading(true);
-      try {
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
+      const [perumahanRes, wargaRes, tagihanRes, disbRes] = await Promise.all([
+        supabase.from('perumahan').select('id, nama, created_at'),
+        supabase.from('warga').select('id, perumahan_id'),
+        supabase.from('tagihan').select('jumlah, status, perumahan_id, disbursement_id'),
+        supabase.from('disbursements').select('*')
+      ]);
 
-        const [wargaRes, tagihanRes, recentRes, rpcRes] = await Promise.all([
-          supabase.from("warga").select("id", { count: "exact" }).eq("perumahan_id", selectedPerumahanId).eq("status_aktif", true),
-          supabase.from("tagihan")
-            .select("jumlah, status")
-            .eq("perumahan_id", selectedPerumahanId)
-            .eq("bulan", currentMonth)
-            .eq("tahun", currentYear),
-          supabase.from("tagihan")
-            .select(`
-              id, jumlah, created_at,
-              warga:warga_id(nama, blok)
-            `)
-            .eq("perumahan_id", selectedPerumahanId)
-            .eq("status", "Paid")
-            .order("created_at", { ascending: false })
-            .limit(5),
-          supabase.rpc('get_dashboard_stats', { p_perumahan_id: selectedPerumahanId })
-        ]);
+      if (perumahanRes.error) throw perumahanRes.error;
 
-        const iuranBulanIni = tagihanRes.data
-          ?.filter(d => d.status === 'Paid')
-          .reduce((acc, curr) => acc + (parseInt(curr.jumlah) || 0), 0) || 0;
+      const totalPerumahan = perumahanRes.data?.length || 0;
+      const totalWarga = wargaRes.data?.length || 0;
+      
+      const paidBills = tagihanRes.data?.filter(t => t.status === 'Paid') || [];
+      const totalVolume = paidBills.reduce((sum, t) => sum + Number(t.jumlah), 0);
+      const totalPlatformFee = disbRes.data?.reduce((sum, d) => sum + Number(d.admin_fee), 0) || 0;
+      const totalDisbursed = disbRes.data?.reduce((sum, d) => sum + Number(d.amount), 0) || 0;
+      const totalHeld = paidBills.filter(t => !t.disbursement_id).reduce((sum, t) => sum + Number(t.jumlah), 0);
 
-        const totalWarga = wargaRes.count || 0;
-        const sudahBayar = tagihanRes.data?.filter(d => d.status === 'Paid').length || 0;
-        const ratePembayaran = totalWarga > 0 ? (sudahBayar / totalWarga) * 100 : 0;
+      // Aggregate statistics per perumahan
+      const complexStatsMap = {};
+      perumahanRes.data?.forEach(p => {
+        complexStatsMap[p.id] = {
+          id: p.id,
+          nama: p.nama,
+          createdAt: p.created_at,
+          wargaCount: 0,
+          totalCollected: 0,
+          payoutCount: 0
+        };
+      });
 
-        const rpcData = rpcRes.data || {};
-        
-        // Chart Data processing from RPC
-        const labels = [];
-        const cData = [];
-        const d = new Date();
-        d.setDate(1); 
-        for (let i = 5; i >= 0; i--) {
-          const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
-          labels.push(m.toLocaleString('id-ID', { month: 'short' }));
-          
-          // Find matching data from RPC
-          const monthData = rpcData.kas_bulanan?.find(k => k.month === m.getMonth() && k.year === m.getFullYear());
-          
-          cData.push({ 
-            month: m.getMonth(), 
-            year: m.getFullYear(), 
-            pemasukan: monthData ? parseInt(monthData.pemasukan) || 0 : 0, 
-            pengeluaran: monthData ? parseInt(monthData.pengeluaran) || 0 : 0 
-          });
+      wargaRes.data?.forEach(w => {
+        if (complexStatsMap[w.perumahan_id]) {
+          complexStatsMap[w.perumahan_id].wargaCount += 1;
         }
+      });
 
-        const maxVal = Math.max(...cData.map(c => Math.max(c.pemasukan, c.pengeluaran)), 1);
-        setChartData({ data: cData, labels, max: maxVal });
+      paidBills.forEach(t => {
+        if (complexStatsMap[t.perumahan_id]) {
+          complexStatsMap[t.perumahan_id].totalCollected += Number(t.jumlah);
+        }
+      });
 
-        // Tunggakan Processing from RPC
-        setTopTunggakan(rpcData.top_tunggakan || []);
+      disbRes.data?.forEach(d => {
+        if (complexStatsMap[d.perumahan_id]) {
+          complexStatsMap[d.perumahan_id].payoutCount += 1;
+        }
+      });
 
-        setStats({
-          totalWarga,
-          iuranBulanIni,
-          ratePembayaran,
-          saldoKas: parseInt(rpcData.saldo_kas) || 0,
-          totalPengeluaran: parseInt(rpcData.pengeluaran) || 0,
-          totalTunggakan: parseInt(rpcData.total_tunggakan) || 0
-        });
-        setRecentPayments(recentRes.data || []);
-      } catch (err) {
-        console.error("Error fetching dashboard stats:", err);
-      } finally {
-        setLoading(false);
-      }
+      setSuperStats({
+        totalPerumahan,
+        totalWarga,
+        totalVolume,
+        totalPlatformFee,
+        totalDisbursed,
+        totalHeld
+      });
+      setSuperComplexes(Object.values(complexStatsMap));
+    } catch (err) {
+      console.error("Gagal memuat statistik Super Admin:", err);
+    } finally {
+      setLoading(false);
     }
-    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!selectedPerumahanId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+
+      const [wargaRes, tagihanRes, recentRes, rpcRes] = await Promise.all([
+        supabase.from("warga").select("id", { count: "exact" }).eq("perumahan_id", selectedPerumahanId).eq("status_aktif", true),
+        supabase.from("tagihan")
+          .select("jumlah, status")
+          .eq("perumahan_id", selectedPerumahanId)
+          .eq("bulan", currentMonth)
+          .eq("tahun", currentYear),
+        supabase.from("tagihan")
+          .select(`
+            id, jumlah, created_at,
+            warga:warga_id(nama, blok)
+          `)
+          .eq("perumahan_id", selectedPerumahanId)
+          .eq("status", "Paid")
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase.rpc('get_dashboard_stats', { p_perumahan_id: selectedPerumahanId })
+      ]);
+
+      const iuranBulanIni = tagihanRes.data
+        ?.filter(d => d.status === 'Paid')
+        .reduce((acc, curr) => acc + (parseInt(curr.jumlah) || 0), 0) || 0;
+
+      const totalWarga = wargaRes.count || 0;
+      const sudahBayar = tagihanRes.data?.filter(d => d.status === 'Paid').length || 0;
+      const ratePembayaran = totalWarga > 0 ? (sudahBayar / totalWarga) * 100 : 0;
+
+      const rpcData = rpcRes.data || {};
+      
+      // Chart Data processing from RPC
+      const labels = [];
+      const cData = [];
+      const d = new Date();
+      d.setDate(1); 
+      for (let i = 5; i >= 0; i--) {
+        const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
+        labels.push(m.toLocaleString('id-ID', { month: 'short' }));
+        
+        // Find matching data from RPC
+        const monthData = rpcData.kas_bulanan?.find(k => k.month === m.getMonth() && k.year === m.getFullYear());
+        
+        cData.push({ 
+          month: m.getMonth(), 
+          year: m.getFullYear(), 
+          pemasukan: monthData ? parseInt(monthData.pemasukan) || 0 : 0, 
+          pengeluaran: monthData ? parseInt(monthData.pengeluaran) || 0 : 0 
+        });
+      }
+
+      const maxVal = Math.max(...cData.map(c => Math.max(c.pemasukan, c.pengeluaran)), 1);
+      setChartData({ data: cData, labels, max: maxVal });
+
+      // Tunggakan Processing from RPC
+      setTopTunggakan(rpcData.top_tunggakan || []);
+
+      setStats({
+        totalWarga,
+        iuranBulanIni,
+        ratePembayaran,
+        saldoKas: parseInt(rpcData.saldo_kas) || 0,
+        totalPengeluaran: parseInt(rpcData.pengeluaran) || 0,
+        totalTunggakan: parseInt(rpcData.total_tunggakan) || 0
+      });
+      setRecentPayments(recentRes.data || []);
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [selectedPerumahanId]);
 
+  useEffect(() => {
+    if (profile?.role === 'super_admin' && !selectedPerumahanId) {
+      fetchSuperAdminData();
+    } else {
+      fetchDashboardData();
+    }
+  }, [selectedPerumahanId, profile, fetchSuperAdminData, fetchDashboardData]);
+
   if (profile?.role === 'super_admin' && !selectedPerumahanId) {
-    return <SelectionRequired />;
+    return (
+      <div className="flex flex-col gap-6 max-w-full mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <Layers className="w-6 h-6 text-indigo-600" /> Konsol Super Admin
+            </h1>
+            <p className="text-slate-500 text-sm mt-1">Ikhtisar metrik skala platform, performa tenant, dan log finansial</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={fetchSuperAdminData} icon={RefreshCw}>Refresh</Button>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {loading ? (
+            Array(4).fill(0).map((_, i) => (
+              <Card key={i} className="h-32 bg-white animate-pulse" />
+            ))
+          ) : (
+            <>
+              <StatCard title="Total Komplek (Tenant)" value={superStats?.totalPerumahan?.toString()} change="Perumahan Terdaftar" icon={Building2} />
+              <StatCard title="Total Warga Terdaftar" value={superStats?.totalWarga?.toString()} change="Seluruh Komplek" icon={Users} />
+              <StatCard title="Volume QRIS Platform" value={`Rp ${(superStats?.totalVolume || 0).toLocaleString('id-ID')}`} change="Kumulatif Pembayaran" icon={Wallet} />
+              <StatCard title="Komisi Platform" value={`Rp ${(superStats?.totalPlatformFee || 0).toLocaleString('id-ID')}`} change="Dihitung dari Pencairan" icon={Receipt} />
+            </>
+          )}
+        </div>
+
+        {/* Info Box */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1 flex flex-col justify-between p-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-bold text-indigo-600 uppercase tracking-widest">Dana Platform</p>
+                <Badge variant="green">Held Funds</Badge>
+              </div>
+              <p className="text-2xl font-black text-slate-900 mt-2">
+                Rp {(superStats?.totalHeld || 0).toLocaleString('id-ID')}
+              </p>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                Total dana pembayaran iuran warga yang saat ini masih ditampung di rekening utama gateway Pakasir dan belum dicairkan ke bank pengurus perumahan.
+              </p>
+            </div>
+            <Link to="/super-admin/disbursements" className="mt-6">
+              <Button variant="indigo" className="w-full text-xs" iconRight={ChevronRight}>Kelola Pencairan Dana</Button>
+            </Link>
+          </Card>
+
+          {/* Complexes Performance list */}
+          <Card className="lg:col-span-2 noPadding">
+            <CardHeader title="Performa Tenant Perumahan" subtitle="Statistik aktivitas transaksi QRIS dan jumlah warga per tenant" />
+            <Table>
+              <THead>
+                <TR isHeader>
+                  <TH>Nama Perumahan</TH>
+                  <TH>Terdaftar</TH>
+                  <TH textAlign="right">Warga</TH>
+                  <TH textAlign="right">Total Transaksi</TH>
+                  <TH textAlign="right">Status Pencairan</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {loading ? (
+                  <TR><TD colSpan={5} className="text-center py-6 text-slate-400">Memuat data...</TD></TR>
+                ) : superComplexes.length === 0 ? (
+                  <TR><TD colSpan={5} className="text-center py-6 text-slate-400">Belum ada tenant terdaftar.</TD></TR>
+                ) : superComplexes.map(item => (
+                  <TR key={item.id}>
+                    <TD className="font-bold text-slate-900">{item.nama}</TD>
+                    <TD className="text-xs text-slate-500">{new Date(item.createdAt).toLocaleDateString('id-ID')}</TD>
+                    <TD textAlign="right" className="font-semibold">{item.wargaCount} Jiwa</TD>
+                    <TD textAlign="right" className="font-bold text-indigo-600">Rp {item.totalCollected.toLocaleString('id-ID')}</TD>
+                    <TD textAlign="right">
+                      <Badge variant={item.payoutCount > 0 ? 'green' : 'amber'}>
+                        {item.payoutCount > 0 ? `${item.payoutCount} Payouts` : 'Belum Pernah'}
+                      </Badge>
+                    </TD>
+                  </TR>
+                ))}
+              </TBody>
+            </Table>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   if (profile?.role === 'warga') {

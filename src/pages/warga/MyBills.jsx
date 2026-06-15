@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Card, CardHeader, Badge, Modal, Input, Table, THead, TBody, TR, TH, TD } from "@/components/ui";
+import { printInvoice } from "@/utils/exportUtils";
 
 export default function MyBills() {
   const { profile } = useAuth();
@@ -95,6 +96,48 @@ export default function MyBills() {
       alert("Konfirmasi pembayaran terkirim. Menunggu verifikasi admin.");
       setIsModalOpen(false);
       fetchData();
+    } catch (error) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePayQRIS = (bill) => {
+    const slug = "habitix";
+    const redirectUrl = encodeURIComponent(`${window.location.origin}/my-bills`);
+    const checkoutUrl = `https://app.pakasir.com/pay/${slug}/${bill.jumlah}?order_id=${bill.id}&qris_only=1&redirect=${redirectUrl}`;
+    window.location.href = checkoutUrl;
+  };
+
+  const handleCreateAndPayQRIS = async () => {
+    if (!amount) {
+      alert("Jumlah harus diisi");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase
+        .from('tagihan')
+        .insert([{
+          perumahan_id: profile.perumahan_id,
+          warga_id: profile.warga_id,
+          bulan: parseInt(payMonth),
+          tahun: parseInt(payYear),
+          jumlah: parseInt(amount),
+          status: 'Unpaid',
+          keterangan: 'Pembayaran QRIS via Dashboard Warga'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const slug = "habitix";
+      const redirectUrl = encodeURIComponent(`${window.location.origin}/my-bills`);
+      const checkoutUrl = `https://app.pakasir.com/pay/${slug}/${data.jumlah}?order_id=${data.id}&qris_only=1&redirect=${redirectUrl}`;
+      window.location.href = checkoutUrl;
     } catch (error) {
       alert("Error: " + error.message);
     } finally {
@@ -190,13 +233,14 @@ export default function MyBills() {
                 <TH>Status</TH>
                 <TH>Tgl Konfirmasi</TH>
                 <TH>Keterangan</TH>
+                <TH textAlign="right">Aksi</TH>
               </TR>
             </THead>
             <TBody>
               {loading ? (
-                Array(3).fill(0).map((_, i) => <TR key={i}><TD colSpan={5}><div className="h-12 bg-slate-50 animate-pulse rounded-xl"></div></TD></TR>)
+                Array(3).fill(0).map((_, i) => <TR key={i}><TD colSpan={6}><div className="h-12 bg-slate-50 animate-pulse rounded-xl"></div></TD></TR>)
               ) : tagihan.length === 0 ? (
-                <TR><TD colSpan={5} textAlign="center" className="py-12 text-slate-400 font-bold text-[10px] uppercase tracking-widest">Belum ada catatan pembayaran</TD></TR>
+                <TR><TD colSpan={6} textAlign="center" className="py-12 text-slate-400 font-bold text-[10px] uppercase tracking-widest">Belum ada catatan pembayaran</TD></TR>
               ) : tagihan.map((b) => (
                 <TR key={b.id}>
                   <TD className="font-bold text-slate-900">
@@ -212,6 +256,27 @@ export default function MyBills() {
                     {b.created_at ? new Date(b.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : "-"}
                   </TD>
                   <TD className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">{b.keterangan || "-"}</TD>
+                  <TD textAlign="right">
+                    {b.status === 'Paid' ? (
+                      <Button 
+                        variant="outline" 
+                        size="xs" 
+                        onClick={() => printInvoice(profile, b)}
+                        title="Unduh Kuitansi PDF"
+                      >
+                        Kuitansi
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="primary" 
+                        size="xs" 
+                        onClick={() => handlePayQRIS(b)}
+                        title="Bayar tagihan ini via QRIS Pakasir"
+                      >
+                        Bayar QRIS
+                      </Button>
+                    )}
+                  </TD>
                 </TR>
               ))}
             </TBody>
@@ -280,15 +345,23 @@ export default function MyBills() {
             </p>
           </div>
 
-          <div className="flex gap-4 pt-4">
-            <Button variant="outline" className="flex-1 py-4" onClick={() => setIsModalOpen(false)}>Batal</Button>
+          <div className="flex flex-col md:flex-row gap-4 pt-4">
+            <Button variant="outline" className="flex-1 py-3" onClick={() => setIsModalOpen(false)}>Batal</Button>
             <Button 
               variant="primary" 
-              className="flex-1 py-4" 
+              className="flex-1 py-3" 
+              isLoading={isSubmitting}
+              onClick={handleCreateAndPayQRIS}
+            >
+              Bayar QRIS (Otomatis)
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex-1 py-3" 
               isLoading={isSubmitting}
               onClick={handlePay}
             >
-              Kirim Konfirmasi
+              Transfer Manual
             </Button>
           </div>
         </div>

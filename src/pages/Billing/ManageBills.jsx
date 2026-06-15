@@ -3,6 +3,7 @@ import { Plus, Search, Filter, CheckCircle, Clock, AlertCircle, FileText, Send, 
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Table, THead, TBody, TR, TH, TD, Badge } from "@/components/ui";
+import { printInvoice, exportToPDF, exportToExcel } from "@/utils/exportUtils";
 
 export default function ManageBills() {
   const { selectedPerumahanId } = useAuth();
@@ -159,6 +160,36 @@ export default function ManageBills() {
     document.body.removeChild(link);
   };
 
+  const handlePrintReceipt = (item) => {
+    printInvoice(item.warga, item);
+  };
+
+  const handleExportPDF = () => {
+    if (filteredData.length === 0) return;
+    const headers = ["Warga", "Blok", "Bulan/Tahun", "Jumlah", "Status"];
+    const rows = filteredData.map(item => [
+      item.warga?.nama || "",
+      item.warga?.blok || "",
+      `${item.bulan}/${item.tahun}`,
+      `Rp ${item.jumlah.toLocaleString('id-ID')}`,
+      item.status
+    ]);
+    exportToPDF("Laporan Tagihan Warga", headers, rows, `laporan_tagihan_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleExportExcel = () => {
+    if (filteredData.length === 0) return;
+    const exportData = filteredData.map(item => ({
+      "Nama Warga": item.warga?.nama || "",
+      "Blok": item.warga?.blok || "",
+      "Bulan": item.bulan,
+      "Tahun": item.tahun,
+      "Jumlah": item.jumlah,
+      "Status": item.status
+    }));
+    exportToExcel(exportData, `laporan_tagihan_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   return (
     <div className="flex flex-col gap-4 md:gap-8">
       {/* Header */}
@@ -168,14 +199,9 @@ export default function ManageBills() {
           <p className="text-slate-500 text-sm mt-1">Distribusi dan audit invoice bulanan untuk seluruh unit warga.</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={handleExportCSV}
-            variant="outline"
-            icon={FileText}
-            size="md"
-          >
-            Ekspor Laporan
-          </Button>
+          <Button onClick={handleExportCSV} variant="outline" icon={FileText} size="sm">CSV</Button>
+          <Button onClick={handleExportPDF} variant="outline" icon={FileText} size="sm">PDF</Button>
+          <Button onClick={handleExportExcel} variant="outline" icon={FileText} size="sm">Excel</Button>
           <Button
             onClick={handleGenerateBills}
             isLoading={generating}
@@ -261,7 +287,14 @@ export default function ManageBills() {
                         title="Konfirmasi Manual"
                       />
                     )}
-                    <Button variant="ghost" size="sm" icon={Receipt} className="text-slate-400 hover:text-slate-950 hover:bg-slate-50" />
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      icon={Receipt} 
+                      className="text-slate-400 hover:text-slate-950 hover:bg-slate-50" 
+                      onClick={() => handlePrintReceipt(item)}
+                      title="Cetak Kuitansi"
+                    />
                     <Button variant="ghost" size="sm" icon={Send} className="text-slate-400 hover:text-blue-600 hover:bg-blue-50" />
                     <Button variant="ghost" size="sm" icon={Trash2} className="text-slate-300 hover:text-red-500 hover:bg-red-50" onClick={() => handleDeleteBill(item.id)} />
                   </div>

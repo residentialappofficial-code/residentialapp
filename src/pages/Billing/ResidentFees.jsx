@@ -1,9 +1,15 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Search, CheckCircle2, XCircle, Calendar, Info, ArrowUpRight, ArrowDownRight, Eye, ArrowUpDown } from "lucide-react";
+import { Search, Calendar, Info, FileText, Building2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { Button, Input, Card, CardHeader, Table, THead, TBody, TR, TH, TD, Badge, Modal, Select, ConfirmModal } from "@/components/ui";
-import { calculateFinance, formatCurrency, formatDate } from "@/utils/financeUtils";
+import { Button, Input, Card, CardHeader, ConfirmModal } from "@/components/ui";
+import { calculateFinance, formatCurrency } from "@/utils/financeUtils";
+import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
+
+// Import modular sub-components
+import ResidentFeesTable from "@/components/billing/ResidentFeesTable";
+import ResidentFeesMobileList from "@/components/billing/ResidentFeesMobileList";
+import ResidentBillsModal from "@/components/billing/ResidentBillsModal";
 
 const monthsFull = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -11,7 +17,7 @@ const monthsFull = [
 ];
 
 export default function ResidentFees() {
-  const { selectedPerumahanId, profile } = useAuth();
+  const { selectedPerumahanId, profile, perumahanList, switchPerumahan } = useAuth();
   const [loading, setLoading] = useState(true);
   const [warga, setWarga] = useState([]);
   const [allBills, setAllBills] = useState([]);
@@ -45,10 +51,8 @@ export default function ResidentFees() {
            pengurusRole.includes('bendahara');
   }, [profile]);
 
-  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    // Force start from 2023 as per user data
     let minYear = Math.min(2023, currentYear);
     
     warga.forEach(w => {
@@ -163,7 +167,6 @@ export default function ResidentFees() {
   const executeToggleStatus = async (bill, wargaId = null, month = null, year = null) => {
     setConfirmModal(prev => ({ ...prev, isOpen: false }));
     
-    // Jika bill belum ada (klik pada titik abu-abu)
     if (!bill) {
       const nominal = iuranConfig?.iuran_bulanan || iuranConfig?.tarif_dasar || 0;
       setUpdatingId(`new-${wargaId}-${month}`);
@@ -193,7 +196,6 @@ export default function ResidentFees() {
       return;
     }
 
-    // Jika bill sudah ada (fast toggle)
     const newStatus = bill.status === 'Paid' ? 'Unpaid' : 'Paid';
     setUpdatingId(bill.id);
     try {
@@ -217,6 +219,39 @@ export default function ResidentFees() {
     setIsModalOpen(true);
   };
 
+  const handleExportPDF = () => {
+    if (filteredWarga.length === 0) return;
+    const headers = ["Unit/Blok", "Nama Warga", "Kewajiban", "Sudah Dibayar", "Kurang", "Lebih"];
+    const rows = filteredWarga.map(w => {
+      const fin = calculateFinance(w, iuranConfig, allBills);
+      return [
+        w.blok,
+        w.nama,
+        `Rp ${formatCurrency(fin?.totalObligation || 0)}`,
+        `Rp ${formatCurrency(fin?.totalPaid || 0)}`,
+        `Rp ${formatCurrency(fin?.kurang || 0)}`,
+        `Rp ${formatCurrency(fin?.lebih || 0)}`
+      ];
+    });
+    exportToPDF("Rekap Keuangan Warga", headers, rows, `rekap_iuran_${selectedYear}.pdf`);
+  };
+
+  const handleExportExcel = () => {
+    if (filteredWarga.length === 0) return;
+    const exportData = filteredWarga.map(w => {
+      const fin = calculateFinance(w, iuranConfig, allBills);
+      return {
+        "Unit/Blok": w.blok,
+        "Nama Warga": w.nama,
+        "Kewajiban (Rp)": fin?.totalObligation || 0,
+        "Sudah Dibayar (Rp)": fin?.totalPaid || 0,
+        "Kurang (Rp)": fin?.kurang || 0,
+        "Lebih (Rp)": fin?.lebih || 0
+      };
+    });
+    exportToExcel(exportData, `rekap_iuran_${selectedYear}.xlsx`);
+  };
+
   return (
     <div className="flex flex-col gap-4 md:gap-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -225,6 +260,23 @@ export default function ResidentFees() {
           <p className="text-slate-500 text-sm mt-1">Rekapitulasi kewajiban dan transparansi keuangan unit.</p>
         </div>
         <div className="flex items-center gap-4">
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" icon={FileText} onClick={handleExportPDF}>PDF</Button>
+            <Button variant="outline" size="sm" icon={FileText} onClick={handleExportExcel}>Excel</Button>
+          </div>
+          {profile?.role === 'super_admin' && (
+            <div className="flex items-center bg-white border border-slate-200 rounded-lg px-4 py-2 gap-2 shadow-sm">
+              <Building2 className="w-4 h-4 text-slate-400" />
+              <select 
+                value={selectedPerumahanId || ""} 
+                onChange={(e) => switchPerumahan(e.target.value)}
+                className="text-xs font-semibold text-slate-900 bg-transparent outline-none cursor-pointer"
+              >
+                <option value="" disabled>Pilih Perumahan</option>
+                {perumahanList.map(p => <option key={p.id} value={p.id}>{p.nama}</option>)}
+              </select>
+            </div>
+          )}
           <div className="flex items-center bg-white border border-slate-200 rounded-lg px-4 py-2 gap-2 shadow-sm">
             <Calendar className="w-4 h-4 text-slate-400" />
             <select 
@@ -253,232 +305,33 @@ export default function ResidentFees() {
           }
         />
 
-        <div className="overflow-x-auto hidden lg:block">
-          <Table>
-            <THead>
-              <TR isHeader className="bg-slate-50/30">
-                <TH 
-                  className="sticky left-0 bg-white/80 backdrop-blur-md z-10 border-r border-slate-100 pl-6 text-[10px] font-bold uppercase tracking-widest text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors w-40"
-                  onClick={() => requestSort('blok')}
-                >
-                  <div className="flex items-center gap-2">
-                    Unit / Nama
-                    <ArrowUpDown size={10} className={sortConfig.key === 'blok' ? 'text-indigo-500' : 'text-slate-300'} />
-                  </div>
-                </TH>
-                <TH className="text-[10px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap w-px">Tgl Serah Terima</TH>
-                <TH 
-                  textAlign="right" 
-                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors w-px whitespace-nowrap px-4"
-                  onClick={() => requestSort('totalObligation')}
-                >
-                  <div className="flex items-center justify-end gap-2">
-                    Kewajiban
-                    <ArrowUpDown size={10} className={sortConfig.key === 'totalObligation' ? 'text-indigo-500' : 'text-slate-300'} />
-                  </div>
-                </TH>
-                <TH 
-                  textAlign="right" 
-                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors w-px whitespace-nowrap px-4"
-                  onClick={() => requestSort('totalPaid')}
-                >
-                  <div className="flex items-center justify-end gap-2">
-                    Sudah Dibayar
-                    <ArrowUpDown size={10} className={sortConfig.key === 'totalPaid' ? 'text-indigo-500' : 'text-slate-300'} />
-                  </div>
-                </TH>
-                <TH 
-                  textAlign="right" 
-                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors w-px whitespace-nowrap px-4"
-                  onClick={() => requestSort('kurang')}
-                >
-                  <div className="flex items-center justify-end gap-2">
-                    Kurang
-                    <ArrowUpDown size={10} className={sortConfig.key === 'kurang' ? 'text-indigo-500' : 'text-slate-300'} />
-                  </div>
-                </TH>
-                <TH 
-                  textAlign="right" 
-                  className="text-[10px] font-bold uppercase tracking-widest text-slate-400 cursor-pointer hover:text-indigo-600 transition-colors w-px whitespace-nowrap px-4"
-                  onClick={() => requestSort('lebih')}
-                >
-                  <div className="flex items-center justify-end gap-2">
-                    Lebih
-                    <ArrowUpDown size={10} className={sortConfig.key === 'lebih' ? 'text-indigo-500' : 'text-slate-300'} />
-                  </div>
-                </TH>
-                {months.map(m => (
-                  <TH key={m} textAlign="center" className="text-[9px] font-black uppercase text-slate-400 w-8 px-0 border-l border-slate-50">{m}</TH>
-                ))}
-              </TR>
-            </THead>
-            <TBody>
-              {loading ? (
-                Array(6).fill(0).map((_, i) => (
-                  <TR key={i}><TD colSpan={18}><div className="h-16 bg-slate-50/50 rounded-2xl animate-pulse"></div></TD></TR>
-                ))
-              ) : filteredWarga.length === 0 ? (
-                <TR><TD colSpan={18} textAlign="center" className="py-24 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">Data warga tidak ditemukan</TD></TR>
-              ) : filteredWarga.map((w) => {
-                const fin = calculateFinance(w, iuranConfig, allBills);
-                return (
-                  <TR key={w.id} className="group hover:bg-slate-50/50 transition-all text-[11px]">
-                    <TD className="sticky left-0 bg-white group-hover:bg-slate-50/50 z-10 border-r border-slate-100 transition-colors py-4">
-                      <div className="flex justify-between items-center gap-2 pr-2">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-slate-900 tracking-tight">{w.blok}</span>
-                          <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider truncate w-32">{w.nama}</span>
-                        </div>
-                        <button 
-                          onClick={() => openWargaBills(w)}
-                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-indigo-600 transition-all cursor-pointer"
-                          title="Lihat Detail Riwayat"
-                        >
-                          <Eye size={14} />
-                        </button>
-                      </div>
-                    </TD>
-                    <TD className="text-xs font-medium text-slate-600 whitespace-nowrap w-px">
-                      {fin ? formatDate(fin.tglSerahTerima) : "-"}
-                    </TD>
-                    <TD textAlign="right" className="font-bold text-slate-900 whitespace-nowrap w-px px-4">
-                      {fin ? `Rp ${formatCurrency(fin.totalObligation)}` : "-"}
-                    </TD>
-                    <TD textAlign="right" className="font-bold text-green-600 whitespace-nowrap w-px px-4">
-                      {fin ? `Rp ${formatCurrency(fin.totalPaid)}` : "-"}
-                    </TD>
-                    <TD textAlign="right" className="w-px whitespace-nowrap px-4">
-                      {fin?.kurang > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-red-600 font-bold">
-                          <ArrowDownRight size={12} />
-                          Rp {formatCurrency(fin.kurang)}
-                        </span>
-                      ) : <span className="text-slate-300">-</span>}
-                    </TD>
-                    <TD textAlign="right" className="w-px whitespace-nowrap px-4">
-                      {fin?.lebih > 0 ? (
-                        <span className="inline-flex items-center gap-1 text-blue-600 font-bold">
-                          <ArrowUpRight size={12} />
-                          Rp {formatCurrency(fin.lebih)}
-                        </span>
-                      ) : <span className="text-slate-300">-</span>}
-                    </TD>
-                    {months.map((_, i) => {
-                      const status = getMonthStatus(w.id, i + 1, selectedYear);
-                      const bill = allBills.find(b => b.warga_id === w.id && b.bulan === (i + 1) && b.tahun === selectedYear);
-                      const isGray = !fin || status === 'None';
-                      
-                      return (
-                        <TD key={i} textAlign="center" className="px-0 border-l border-slate-50/50">
-                          {isGray ? (
-                            <button 
-                              onClick={() => handleToggleStatus(null, w.id, i + 1, selectedYear)}
-                              disabled={!canEdit || updatingId === `new-${w.id}-${i+1}`}
-                              className={`group flex items-center justify-center w-full h-10 transition-all ${canEdit ? 'cursor-pointer hover:bg-slate-50/50' : 'cursor-default'}`}
-                              title={canEdit ? `Klik untuk tandai LUNAS ${monthsFull[i]} ${selectedYear}` : "Belum mulai iuran"}
-                            >
-                              <div className={`rounded-full transition-all ${
-                                canEdit 
-                                  ? 'w-4 h-4 border-2 border-dashed border-slate-200 group-hover:border-indigo-400 group-hover:bg-indigo-50 flex items-center justify-center' 
-                                  : 'w-1.5 h-1.5 bg-slate-100'
-                              }`}>
-                                {canEdit && <span className="text-[10px] text-slate-300 group-hover:text-indigo-500 font-bold">+</span>}
-                              </div>
-                            </button>
-                          ) : (
-                            <button 
-                              onClick={() => handleToggleStatus(bill)}
-                              disabled={!canEdit || updatingId === bill?.id}
-                              className={`w-5 h-5 rounded-full flex items-center justify-center mx-auto transition-all ${
-                                status === 'Paid' 
-                                  ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20 scale-110' 
-                                  : 'bg-rose-500 shadow-lg shadow-rose-500/20'
-                              } ${(!canEdit || updatingId === bill?.id) ? 'opacity-50' : 'hover:scale-125'} ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
-                              title={status === 'Paid' ? 'Lunas' : 'Belum Bayar'}
-                            >
-                              {status === 'Paid' ? <CheckCircle2 size={10} className="text-white" /> : <XCircle size={10} className="text-white" />}
-                            </button>
-                          )}
-                        </TD>
-                      );
-                    })}
-                  </TR>
-                );
-              })}
-            </TBody>
-          </Table>
-        </div>
+        {/* Desktop Table Sub-Component */}
+        <ResidentFeesTable 
+          filteredWarga={filteredWarga}
+          iuranConfig={iuranConfig}
+          allBills={allBills}
+          selectedYear={selectedYear}
+          canEdit={canEdit}
+          updatingId={updatingId}
+          loading={loading}
+          getMonthStatus={getMonthStatus}
+          handleToggleStatus={handleToggleStatus}
+          openWargaBills={openWargaBills}
+          requestSort={requestSort}
+          sortConfig={sortConfig}
+        />
 
-        {/* Mobile Card List View */}
-        <div className="block lg:hidden space-y-4 mt-4">
-          {filteredWarga.length === 0 ? (
-            <div className="text-center py-20 text-slate-400 font-bold text-[10px] uppercase tracking-[0.3em]">
-              Data warga tidak ditemukan
-            </div>
-          ) : (
-            filteredWarga.map((w) => {
-              const fin = calculateFinance(w, iuranConfig, allBills);
-              return (
-                <div key={w.id} className="p-5 flex flex-col gap-4 bg-white border border-slate-100 rounded-2xl hover:border-slate-200 transition-colors shadow-sm relative group">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-slate-900 tracking-tight">{w.blok}</span>
-                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">{w.nama}</span>
-                    </div>
-                    <button 
-                      onClick={() => openWargaBills(w)}
-                      className="p-2 hover:bg-slate-50 rounded-xl border border-slate-100 text-slate-500 hover:text-indigo-600 transition-all cursor-pointer"
-                      title="Lihat Detail Riwayat"
-                    >
-                      <Eye size={14} />
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4 py-3 border-y border-slate-50 text-[11px]">
-                    <div>
-                      <p className="text-slate-400 uppercase font-bold tracking-wider">Kewajiban</p>
-                      <p className="text-slate-900 font-bold mt-1 text-xs">Rp {fin ? formatCurrency(fin.totalObligation) : "-"}</p>
-                    </div>
-                    <div>
-                      <p className="text-slate-400 uppercase font-bold tracking-wider">Terbayar</p>
-                      <p className="text-green-600 font-bold mt-1 text-xs">Rp {fin ? formatCurrency(fin.totalPaid) : "-"}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Monthly Payment Grid */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daftar Bulan</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {months.map((m, idx) => {
-                        const monthNum = idx + 1;
-                        const bill = allBills.find(b => b.warga_id === w.id && b.bulan === monthNum && b.tahun === selectedYear);
-                        const status = bill?.status || 'Unpaid';
-                        
-                        return (
-                          <button
-                            key={m}
-                            disabled={!canEdit || updatingId === bill?.id}
-                            onClick={() => handleToggleStatus(bill, w.id, monthNum, selectedYear)}
-                            className={`
-                              px-1.5 py-2 text-[10px] font-bold rounded-xl uppercase tracking-wider text-center border transition-all cursor-pointer
-                              ${status === 'Paid' 
-                                ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100/70' 
-                                : 'bg-slate-50 text-slate-500 border-slate-100 hover:bg-slate-100'}
-                              ${(!canEdit || updatingId === bill?.id) ? 'opacity-60 cursor-not-allowed' : ''}
-                            `}
-                          >
-                            <span className="block text-[9px] opacity-60 font-semibold">{m.substring(0, 3)}</span>
-                            <span className="block mt-0.5">{status === 'Paid' ? 'LUNAS' : 'BELUM'}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+        {/* Mobile Grid List Sub-Component */}
+        <ResidentFeesMobileList 
+          filteredWarga={filteredWarga}
+          iuranConfig={iuranConfig}
+          allBills={allBills}
+          selectedYear={selectedYear}
+          canEdit={canEdit}
+          updatingId={updatingId}
+          handleToggleStatus={handleToggleStatus}
+          openWargaBills={openWargaBills}
+        />
       </Card>
 
       <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex items-start gap-4">
@@ -492,52 +345,15 @@ export default function ResidentFees() {
         </div>
       </div>
 
-      <Modal
+      {/* Detail Invoices Modal */}
+      <ResidentBillsModal 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={selectedWarga ? `Detail Tagihan: ${selectedWarga.nama} (${selectedWarga.blok})` : "Detail Tagihan"}
-        size="lg"
-      >
-        <div className="p-4">
-          <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-            {selectedWarga && (
-              <div className="space-y-3">
-                {allBills
-                  .filter(b => b.warga_id === selectedWarga.id)
-                  .sort((a, b) => {
-                    if (a.tahun !== b.tahun) return b.tahun - a.tahun;
-                    return b.bulan - a.bulan;
-                  })
-                  .map(bill => (
-                    <div key={bill.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100/50 transition-colors">
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">Periode {monthsFull[bill.bulan - 1]} {bill.tahun}</p>
-                        <p className="text-xs font-medium text-slate-500 mt-0.5">Rp {formatCurrency(bill.jumlah)}</p>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant={bill.status === 'Paid' ? 'green' : 'indigo'}>
-                          {bill.status === 'Paid' ? 'Lunas' : 'Belum Bayar'}
-                        </Badge>
-                        <Button 
-                          variant={bill.status === 'Paid' ? 'outline' : 'primary'}
-                          size="sm"
-                          isLoading={updatingId === bill.id}
-                          onClick={() => handleToggleStatus(bill)}
-                          className={bill.status === 'Paid' ? 'text-slate-600 border-slate-200 hover:bg-slate-100' : ''}
-                        >
-                          {bill.status === 'Paid' ? 'Batalkan' : 'Tandai Lunas'}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {allBills.filter(b => b.warga_id === selectedWarga.id).length === 0 && (
-                    <div className="text-center py-10 text-slate-400 text-sm font-medium">Belum ada riwayat tagihan tercatat.</div>
-                  )}
-              </div>
-            )}
-          </div>
-        </div>
-      </Modal>
+        selectedWarga={selectedWarga}
+        allBills={allBills}
+        updatingId={updatingId}
+        handleToggleStatus={handleToggleStatus}
+      />
       
       <ConfirmModal 
         {...confirmModal}

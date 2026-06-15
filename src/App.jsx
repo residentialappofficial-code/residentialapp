@@ -1,8 +1,9 @@
 import { lazy, Suspense, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { Header } from '@/components/layout/Header';
 import { useAuth } from '@/contexts/AuthContext';
+import SuspendedScreen from '@/components/SuspendedScreen';
 
 // Lazy Loaded Pages
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
@@ -33,6 +34,9 @@ const ManageRoles = lazy(() => import('@/pages/ManageRoles'));
 const Changelog = lazy(() => import('@/pages/Changelog'));
 const SystemSettings = lazy(() => import('@/pages/SuperAdmin/SystemSettings'));
 const AuditLogs = lazy(() => import('@/pages/SuperAdmin/AuditLogs'));
+const Disbursements = lazy(() => import('@/pages/SuperAdmin/Disbursements'));
+const Subscription = lazy(() => import('@/pages/Admin/Subscription'));
+const ManageSubscriptions = lazy(() => import('@/pages/SuperAdmin/ManageSubscriptions'));
 
 // Guard: redirect ke /login kalau belum login & cek role
 function PrivateRoute({ children, allowedRoles = [] }) {
@@ -86,6 +90,31 @@ function PublicRoute({ children }) {
 
 function AppLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { isSuspended, role } = useAuth();
+  const location = useLocation();
+
+  const isAllowedPath = location.pathname === '/subscription' || location.pathname === '/profile' || location.pathname === '/changelog';
+
+  if (isSuspended && !isAllowedPath) {
+    if (role === 'admin') {
+      return <Navigate to="/subscription" replace />;
+    } else {
+      return (
+        <div className="flex h-screen w-full overflow-hidden bg-slate-50 relative">
+          <AppSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+          <div className="flex flex-col flex-1 min-w-0 h-screen overflow-hidden lg:ml-64 ml-0">
+            <Header onMenuClick={() => setIsSidebarOpen(true)} />
+            <main className="flex-1 overflow-y-auto pt-20 md:pt-24 p-4 md:p-6">
+              <div className="w-full max-w-full mx-auto">
+                <SuspendedScreen />
+              </div>
+            </main>
+          </div>
+        </div>
+      );
+    }
+  }
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 relative">
       <AppSidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
@@ -144,11 +173,11 @@ function App() {
           <Route path="/forum" element={<PrivateRoute><AppLayout><ForumWarga /></AppLayout></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><AppLayout><Profile /></AppLayout></PrivateRoute>} />
           <Route path="/manage-complexes" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><ManageComplexes /></AppLayout></PrivateRoute>} />
-          <Route path="/my-complex" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><MyComplex /></AppLayout></PrivateRoute>} />
+          <Route path="/my-complex" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><MyComplex /></AppLayout></PrivateRoute>} />
           <Route path="/my-bills" element={<PrivateRoute allowedRoles={['warga', 'admin', 'super_admin']}><AppLayout><MyBills /></AppLayout></PrivateRoute>} />
-          <Route path="/iuran-config" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><IuranConfig /></AppLayout></PrivateRoute>} />
-          <Route path="/manage-bills" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><ManageBills /></AppLayout></PrivateRoute>} />
-          <Route path="/verify-payments" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><VerifyPayments /></AppLayout></PrivateRoute>} />
+          <Route path="/iuran-config" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><IuranConfig /></AppLayout></PrivateRoute>} />
+          <Route path="/manage-bills" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><ManageBills /></AppLayout></PrivateRoute>} />
+          <Route path="/verify-payments" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><VerifyPayments /></AppLayout></PrivateRoute>} />
           <Route path="/announcements" element={<PrivateRoute><AppLayout><Announcements /></AppLayout></PrivateRoute>} />
           <Route path="/complaints" element={<PrivateRoute><AppLayout><Complaints /></AppLayout></PrivateRoute>} />
           <Route path="/assets" element={<PrivateRoute><AppLayout><AssetTracking /></AppLayout></PrivateRoute>} />
@@ -156,7 +185,10 @@ function App() {
           <Route path="/roles" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><ManageRoles /></AppLayout></PrivateRoute>} />
           <Route path="/changelog" element={<PrivateRoute><AppLayout><Changelog /></AppLayout></PrivateRoute>} />
           <Route path="/system-settings" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><SystemSettings /></AppLayout></PrivateRoute>} />
-          <Route path="/audit-logs" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><AuditLogs /></AppLayout></PrivateRoute>} />
+          <Route path="/audit-logs" element={<PrivateRoute allowedRoles={['admin', 'super_admin']}><AppLayout><AuditLogs /></AppLayout></PrivateRoute>} />
+          <Route path="/super-admin/disbursements" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><Disbursements /></AppLayout></PrivateRoute>} />
+          <Route path="/subscription" element={<PrivateRoute allowedRoles={['admin']}><AppLayout><Subscription /></AppLayout></PrivateRoute>} />
+          <Route path="/super-admin/subscriptions" element={<PrivateRoute allowedRoles={['super_admin']}><AppLayout><ManageSubscriptions /></AppLayout></PrivateRoute>} />
 
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

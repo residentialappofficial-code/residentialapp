@@ -20,11 +20,13 @@ export default function SystemSettings() {
           .in('key', ['pakasir_slug', 'pakasir_api_key']);
 
         if (data && data.length > 0) {
-          const newConfig = { ...config };
-          data.forEach(item => {
-            newConfig[item.key] = item.value;
+          setConfig(prev => {
+            const newConfig = { ...prev };
+            data.forEach(item => {
+              newConfig[item.key] = item.value;
+            });
+            return newConfig;
           });
-          setConfig(newConfig);
         }
       } catch (err) {
         console.error("Error fetching system settings:", err);

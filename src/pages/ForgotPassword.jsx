@@ -1,23 +1,31 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, ArrowLeft, ArrowRight, ShieldCheck, CheckCircle2, Sparkles } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
-import { Button, Input } from "@/components/ui";
+import { Mail, Lock, ArrowLeft, ArrowRight, ShieldCheck, CheckCircle2, Sparkles } from "lucide-react";
+import { Button, Input, PasswordInput } from "@/components/ui";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
-  const { resetPassword } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     try {
       setLoading(true);
-      const { error: resetError } = await resetPassword(email);
-      if (resetError) throw resetError;
+      const response = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email, password: newPassword })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal memperbarui kata sandi");
+      }
       setSubmitted(true);
     } catch (err) {
       setError(err.message);
@@ -35,10 +43,10 @@ export default function ForgotPassword() {
               <CheckCircle2 className="w-10 h-10 text-emerald-500" />
             </div>
             <div className="space-y-4">
-              <h2 className="text-4xl font-black text-slate-950 tracking-tight text-gradient">Cek Email Anda</h2>
+              <h2 className="text-4xl font-black text-slate-950 tracking-tight text-gradient">Kata Sandi Diperbarui</h2>
               <p className="text-slate-500 font-medium text-sm leading-relaxed">
-                Kami telah mengirimkan tautan pemulihan sandi yang aman ke <br/>
-                <span className="text-slate-900 font-bold">{email}</span>
+                Kata sandi untuk <span className="text-slate-900 font-bold">{email}</span> telah berhasil diperbarui.<br/>
+                Silakan login kembali menggunakan kata sandi baru Anda.
               </p>
             </div>
             <Link 
@@ -77,7 +85,7 @@ export default function ForgotPassword() {
               <span className="text-slate-500 italic font-medium">access point.</span>
             </h1>
             <p className="text-xl text-slate-400 font-medium leading-relaxed max-w-md">
-              Jangan khawatir, protokol pemulihan tersedia untuk situasi ini. Masukkan email Anda untuk mendapatkan tautan aman.
+              Jangan khawatir, protokol pemulihan tersedia untuk situasi ini. Masukkan email Anda untuk melakukan reset kata sandi langsung secara aman.
             </p>
           </div>
         </div>
@@ -109,11 +117,11 @@ export default function ForgotPassword() {
               </div>
             </div>
             <h2 className="text-4xl font-black text-slate-950 mb-3 tracking-tight text-gradient">Lupa Kata Sandi</h2>
-            <p className="text-slate-500 font-medium text-sm">Kami akan mengirimkan tautan pemulihan ke email Anda.</p>
+            <p className="text-slate-500 font-medium text-sm">Masukkan email terdaftar dan kata sandi baru Anda.</p>
           </div>
 
           <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
-            <form onSubmit={handleSubmit} className="flex flex-col gap-10">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-6">
               {error && (
                 <div className="bg-rose-50 border border-rose-100 text-rose-600 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest">
                   {error}
@@ -131,6 +139,15 @@ export default function ForgotPassword() {
                 className="rounded-2xl"
               />
 
+              <PasswordInput
+                label="Kata Sandi Baru"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                className="rounded-2xl"
+              />
+
               <button
                 type="submit"
                 disabled={loading}
@@ -140,7 +157,7 @@ export default function ForgotPassword() {
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Kirim Tautan Pemulihan</span>
+                    <span>Perbarui Kata Sandi</span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}

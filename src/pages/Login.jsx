@@ -116,13 +116,12 @@ export default function Login() {
                     className="rounded-2xl"
                   />
                   <div className="flex justify-end px-1">
-                    <button 
-                      type="button" 
-                      onClick={() => alert("Silakan hubungi administrator kompleks Anda untuk pemulihan akun.")}
+                    <Link 
+                      to="/forgot-password"
                       className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-900 transition-colors"
                     >
                       Lupa Kata Sandi?
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>

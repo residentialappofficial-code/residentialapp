@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button, Input, Card, CardHeader, Badge, Table, THead, TBody, TR, TH, TD, Modal, Select, StatCard } from "@/components/ui";
 import { SelectionRequired } from "@/components/ui/SelectionRequired";
+import { exportToPDF, exportToExcel } from "@/utils/exportUtils";
 
 
 
@@ -82,6 +83,29 @@ export default function ArusKas() {
     document.body.removeChild(link);
   };
 
+  const handleExportPDF = () => {
+    if (filteredData.length === 0) return;
+    const headers = ["Tanggal", "Keterangan", "Kategori", "Jumlah"];
+    const rows = filteredData.map(item => [
+      item.tanggal,
+      item.keterangan || "",
+      item.kategori,
+      `Rp ${item.jumlah.toLocaleString('id-ID')}`
+    ]);
+    exportToPDF("Laporan Arus Kas", headers, rows, `arus_kas_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  const handleExportExcel = () => {
+    if (filteredData.length === 0) return;
+    const exportData = filteredData.map(item => ({
+      "Tanggal": item.tanggal,
+      "Keterangan": item.keterangan || "",
+      "Kategori": item.kategori,
+      "Jumlah": item.jumlah
+    }));
+    exportToExcel(exportData, `arus_kas_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   const handleAddTransaction = async (e) => {
     if (e) e.preventDefault();
     if (!selectedPerumahanId) return;
@@ -152,7 +176,9 @@ export default function ArusKas() {
         </div>
         {profile?.role !== 'warga' && (
           <div className="flex items-center gap-3">
-            <Button variant="ghost" icon={FileText} onClick={handleExportCSV} className="text-slate-500 font-semibold hover:bg-slate-50">Ekspor Laporan</Button>
+            <Button variant="ghost" icon={FileText} onClick={handleExportCSV} className="text-slate-500 font-semibold hover:bg-slate-50 text-xs">CSV</Button>
+            <Button variant="ghost" icon={FileText} onClick={handleExportPDF} className="text-slate-500 font-semibold hover:bg-slate-50 text-xs">PDF</Button>
+            <Button variant="ghost" icon={FileText} onClick={handleExportExcel} className="text-slate-500 font-semibold hover:bg-slate-50 text-xs">Excel</Button>
             <Button 
               variant="primary" 
               size="md" 

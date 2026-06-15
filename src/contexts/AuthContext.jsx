@@ -10,6 +10,7 @@ export const AuthProvider = ({ children }) => {
  const [loading, setLoading] = useState(true);
  const [selectedPerumahanId, setSelectedPerumahanId] = useState(null);
  const [perumahanList, setPerumahanList] = useState([]);
+ const [isSuspended, setIsSuspended] = useState(false);
  const lastFetchedUserId = useRef(null);
 
  const fetchAllPerumahan = useCallback(async () => {
@@ -96,7 +97,50 @@ export const AuthProvider = ({ children }) => {
 
       if (finalProfile) {
         console.log(`  - Profile found as ${normalizedRole}`);
+
+        // Fetch perumahan details for subscription status check
+        let perumahanData = null;
+        let suspended = false;
+        if (perumahanId) {
+          const { data: permData, error: permError } = await supabase
+            .from('perumahan')
+            .select('*')
+            .eq('id', perumahanId)
+            .maybeSingle();
+          if (permError) {
+            console.warn("  - 'perumahan' error:", permError.message);
+          } else {
+            perumahanData = permData;
+          }
+        }
+
+        if (normalizedRole !== 'super_admin' && perumahanData) {
+          if (perumahanData.status === 'suspended' || perumahanData.subscription_status === 'expired' || perumahanData.subscription_status === 'suspended') {
+            suspended = true;
+          } else if (perumahanData.subscription_valid_until) {
+            const validUntil = new Date(perumahanData.subscription_valid_until);
+            if (validUntil < new Date()) {
+              suspended = true;
+            }
+          }
+        }
+        setIsSuspended(suspended);
         
+        // Auto-promote developer accounts to super_admin
+        if (
+          (finalProfile.email === 'kamaludinabdulbasit@gmail.com' || finalProfile.email === 'residentialapp.official@gmail.com') && 
+          normalizedRole !== 'super_admin'
+        ) {
+          console.log("Auto-promoting account to super_admin...");
+          supabase.from('profiles').update({ role: 'super_admin' }).eq('id', userId)
+            .then(({ error }) => {
+              if (error) console.error("Auto-promotion error:", error.message);
+              else console.log("Auto-promotion success!");
+            });
+          normalizedRole = 'super_admin';
+          finalProfile.role = 'super_admin';
+        }
+
         // Fetch permissions if it's a regular warga (not super_admin/admin who get 'all' in hook)
         let rolePermissions = {};
         if (normalizedRole === 'warga' && perumahanId) {
@@ -115,13 +159,35 @@ export const AuthProvider = ({ children }) => {
         setProfile({ 
           ...finalProfile, 
           pengurus: pengurusData,
-          permissions: rolePermissions 
+          permissions: rolePermissions,
+          perumahan: perumahanData
         });
 
         if (normalizedRole === 'super_admin') fetchAllPerumahan();
         if (perumahanId) setSelectedPerumahanId(perumahanId);
       } else {
         console.error("  - No profile found in any table for user:", userId);
+        
+        // Auto-create profile for developer accounts if it does not exist
+        const { data: authData } = await supabase.auth.getUser();
+        const authUser = authData?.user;
+        if (authUser && (authUser.email === 'kamaludinabdulbasit@gmail.com' || authUser.email === 'residentialapp.official@gmail.com')) {
+          console.log("Auto-creating missing profile for developer...");
+          const newProfile = {
+            id: userId,
+            email: authUser.email,
+            nama: authUser.user_metadata?.nama || 'Developer Admin',
+            role: 'super_admin'
+          };
+          const { error: insertError } = await supabase.from('profiles').insert([newProfile]);
+          if (!insertError) {
+            setProfile({ ...newProfile, pengurus: null, permissions: {} });
+            return;
+          } else {
+            console.error("Auto-creation profile error:", insertError.message);
+          }
+        }
+        
         setProfile(null);
         lastFetchedUserId.current = userId; 
       }
@@ -196,6 +262,7 @@ export const AuthProvider = ({ children }) => {
   loading,
   selectedPerumahanId,
   perumahanList,
+  isSuspended,
   switchPerumahan: (id) => setSelectedPerumahanId(id),
   signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
   signUp: (email, password, metadata) => supabase.auth.signUp({ email, password, options: { data: metadata } }),
@@ -204,6 +271,7 @@ export const AuthProvider = ({ children }) => {
    lastFetchedUserId.current = null;
    setSelectedPerumahanId(null);
    setProfile(null);
+   setIsSuspended(false);
    const { error } = await supabase.auth.signOut();
    setLoading(false);
    return { error };

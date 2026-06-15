@@ -21,7 +21,8 @@ import {
   ArrowRight,
   X,
   Server,
-  Activity
+  Activity,
+  Landmark
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,12 +41,12 @@ export function AppSidebar({ isOpen, onClose }) {
     {
       name: "Menu Warga",
       items: [
-        { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard", roles: ["warga", "admin", "super_admin"], module: "dashboard" },
-        { icon: Banknote, label: "Tagihan Saya", to: "/my-bills", roles: ["warga", "admin", "super_admin"], isFixed: true },
-        { icon: Briefcase, label: "Pinjam Aset", to: "/borrow-assets", roles: ["warga", "admin", "super_admin"], module: "assets" },
-        { icon: Megaphone, label: "Pengumuman", to: "/announcements", roles: ["warga", "admin", "super_admin"], module: "pengumuman" },
-        { icon: MessageSquareWarning, label: "Laporan & Keluhan", to: "/complaints", roles: ["warga", "admin", "super_admin"], module: "keluhan" },
-        { icon: MessageSquare, label: "Forum Warga", to: "/forum", roles: ["warga", "admin", "super_admin"], module: "forum" },
+        { icon: LayoutDashboard, label: "Dashboard", to: "/dashboard", roles: ["warga", "admin"], module: "dashboard" },
+        { icon: Banknote, label: "Tagihan Saya", to: "/my-bills", roles: ["warga", "admin"], isFixed: true },
+        { icon: Briefcase, label: "Pinjam Aset", to: "/borrow-assets", roles: ["warga", "admin"], module: "assets" },
+        { icon: Megaphone, label: "Pengumuman", to: "/announcements", roles: ["warga", "admin"], module: "pengumuman" },
+        { icon: MessageSquareWarning, label: "Laporan & Keluhan", to: "/complaints", roles: ["warga", "admin"], module: "keluhan" },
+        { icon: MessageSquare, label: "Forum Warga", to: "/forum", roles: ["warga", "admin"], module: "forum" },
         { icon: User, label: "Profil Saya", to: "/profile", isFixed: true },
       ]
     },
@@ -53,11 +54,13 @@ export function AppSidebar({ isOpen, onClose }) {
       name: "Operasional Admin",
       roles: ["admin", "super_admin"],
       items: [
+        { icon: LayoutDashboard, label: "Dashboard Platform", to: "/dashboard", roles: ["super_admin"] },
         { icon: ShieldCheck, label: "Iuran Warga (Dashboard)", to: "/community-billing", module: "iuran" },
         { icon: Building2, label: "Profil Komplek", to: "/my-complex", roles: ["admin"], module: "profile_complex" },
         { icon: Building2, label: "Infrastruktur Global", to: "/manage-complexes", roles: ["super_admin"] },
         { icon: Server, label: "Sistem & Integrasi", to: "/system-settings", roles: ["super_admin"] },
-        { icon: Activity, label: "Audit Trail", to: "/audit-logs", roles: ["super_admin"] },
+        { icon: Activity, label: "Audit Trail", to: "/audit-logs", roles: ["admin", "super_admin"] },
+        { icon: Landmark, label: "Pencairan Dana", to: "/super-admin/disbursements", roles: ["super_admin"] },
         { icon: Grid3X3, label: "Manajemen Blok", to: "/blok", roles: ["admin", "super_admin"], module: "blok" },
         { icon: Users, label: "Data Warga", to: "/warga", roles: ["admin", "super_admin"], module: "warga" },
         { icon: ShieldCheck, label: "Verifikasi Pembayaran", to: "/verify-payments", roles: ["admin", "super_admin"], module: "iuran" },
@@ -68,9 +71,16 @@ export function AppSidebar({ isOpen, onClose }) {
         { icon: UserCog, label: "Struktur Pengurus", to: "/pengurus", roles: ["admin", "super_admin"], module: "pengurus" },
         { icon: Hammer, label: "Manajemen Aset", to: "/assets", roles: ["admin", "super_admin"], module: "assets" },
         { icon: ShieldCheck, label: "Hak Akses", to: "/roles", roles: ["admin", "super_admin"] },
+        { icon: Megaphone, label: "Moderasi Pengumuman", to: "/announcements", roles: ["super_admin"] },
+        { icon: MessageSquareWarning, label: "Moderasi Keluhan", to: "/complaints", roles: ["super_admin"] },
+        { icon: MessageSquare, label: "Moderasi Forum", to: "/forum", roles: ["super_admin"] },
+        { icon: WalletCards, label: "Langganan Habitix", to: "/subscription", roles: ["admin"], isFixed: true },
+        { icon: WalletCards, label: "Kelola Langganan", to: "/super-admin/subscriptions", roles: ["super_admin"] },
       ]
     }
   ];
+
+  const isSuspended = auth?.isSuspended;
 
   return (
     <>
@@ -114,9 +124,10 @@ export function AppSidebar({ isOpen, onClose }) {
             const roleMatch = !item.roles || item.roles.includes(role) || (isPengurus && item.roles?.includes('admin'));
             
             if (!roleMatch) return false;
+            if (isSuspended && !item.isFixed) return false;
             if (item.isFixed) return true;
             if (item.module) return can(item.module, 'view');
-            return false;
+            return true;
           });
           return hasAccessibleItem;
         }).map((group, groupIdx) => (
@@ -128,9 +139,10 @@ export function AppSidebar({ isOpen, onClose }) {
                 const roleMatch = !item.roles || item.roles.includes(role) || (isPengurus && item.roles?.includes('admin'));
                 
                 if (!roleMatch) return false;
+                if (isSuspended && !item.isFixed) return false;
                 if (item.isFixed) return true;
                 if (item.module) return can(item.module, 'view');
-                return false;
+                return true;
               }).map((item, itemIdx) => {
                 const isActive = location.pathname === item.to;
                 const Icon = item.icon;

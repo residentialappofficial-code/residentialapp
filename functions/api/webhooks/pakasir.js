@@ -14,6 +14,69 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: 'Status not completed' }), { status: 200 });
     }
 
+    // Initialize Supabase with Service Role Key (needs to be set in Cloudflare env)
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+
+    // Check if it is a platform subscription payment
+    if (order_id && order_id.startsWith('SUB_')) {
+      // Format: SUB_[PERUMAHAN_ID]_[PLAN_TYPE]_[TIMESTAMP]
+      const parts = order_id.split('_');
+      const perumahanId = parts[1];
+      const planType = parts[2]; // 'monthly' or 'yearly'
+      
+      if (!perumahanId || !planType) {
+        return new Response(JSON.stringify({ error: 'Format order_id subscription tidak valid' }), { status: 400 });
+      }
+      
+      // Get the current perumahan subscription status
+      const { data: perumahan, error: fetchError } = await supabase
+        .from('perumahan')
+        .select('*')
+        .eq('id', perumahanId)
+        .single();
+        
+      if (fetchError || !perumahan) {
+        console.error('Perumahan not found for subscription:', perumahanId);
+        return new Response(JSON.stringify({ error: 'Perumahan tidak ditemukan' }), { status: 404 });
+      }
+      
+      // Calculate new subscription validity date
+      let baseDate = new Date();
+      if (perumahan.subscription_valid_until) {
+        const currentValidUntil = new Date(perumahan.subscription_valid_until);
+        // If still active, extend. If expired, add from today.
+        if (currentValidUntil > baseDate) {
+          baseDate = currentValidUntil;
+        }
+      }
+      
+      const daysToAdd = planType === 'yearly' ? 365 : 30;
+      const newValidUntil = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000);
+      
+      const { error: updateError } = await supabase
+        .from('perumahan')
+        .update({
+          subscription_status: 'active',
+          subscription_plan: planType,
+          subscription_valid_until: newValidUntil.toISOString(),
+          status: 'active'
+        })
+        .eq('id', perumahanId);
+        
+      if (updateError) {
+        console.error('Failed to update perumahan subscription:', updateError);
+        return new Response(JSON.stringify({ error: updateError.message }), { status: 500 });
+      }
+      
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: `Langganan perumahan ${perumahan.nama} berhasil diperbarui hingga ${newValidUntil.toISOString()}` 
+      }), { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Parse multi-select IDs if they exist (e.g., M_id1_id2_id3)
     let billIds = [];
     if (order_id.startsWith('M_')) {
@@ -21,9 +84,6 @@ export async function onRequestPost(context) {
     } else {
       billIds = [order_id];
     }
-
-    // Initialize Supabase with Service Role Key (needs to be set in Cloudflare env)
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Get first bill info to get perumahan_id and warga_id for cash flow recording
     const { data: bill, error: billError } = await supabase
